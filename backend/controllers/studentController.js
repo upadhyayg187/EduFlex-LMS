@@ -1,4 +1,4 @@
-import Student from '../models/Student.js';
+import Student from '../models/studentModel.js';
 import generateToken from '../utils/generateToken.js';
 
 // @desc    Register a new student

@@ -1,4 +1,4 @@
-import Company from '../models/Company.js';
+import Company from '../models/companyModel.js';
 import generateToken from '../utils/generateToken.js';
 
 // @desc    Register a new company

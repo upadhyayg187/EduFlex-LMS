@@ -1,6 +1,6 @@
-import Admin from '../models/Admin.js';
-import Company from '../models/Company.js';
-import Student from '../models/Student.js';
+import Admin from '../models/adminModel.js';
+import Company from '../models/companyModel.js';
+import Student from '../models/studentModel.js';
 import generateToken from '../utils/generateToken.js'; // Assuming you created this from the previous step
 
 // @desc    Login for all roles & get token

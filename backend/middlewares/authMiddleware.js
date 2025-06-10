@@ -1,27 +1,34 @@
+// backend/middlewares/authMiddleware.js
+
 import jwt from 'jsonwebtoken';
-import Admin from '../models/Admin.js';
-import Company from '../models/Company.js';
-import Student from '../models/Student.js';
+import Admin from '../models/adminModel.js';
+import Company from '../models/companyModel.js';
+import Student from '../models/studentModel.js';
 
-const protect = async (req, res, next) => {
+export const protect = async (req, res, next) => {
   let token;
-  token = req.cookies.jwt;
 
-  if (token) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     try {
+      token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Attach user to the request object
-      // This is flexible and finds the user from any collection
-      req.user =
-        (await Admin.findById(decoded.userId).select('-password')) ||
-        (await Company.findById(decoded.userId).select('-password')) ||
-        (await Student.findById(decoded.userId).select('-password'));
-      
-      req.role = decoded.role; // Attach role to the request
+      const { id, role } = decoded;
 
+      if (role === 'admin') {
+        req.user = await Admin.findById(id).select('-password');
+      } else if (role === 'company') {
+        req.user = await Company.findById(id).select('-password');
+      } else if (role === 'student') {
+        req.user = await Student.findById(id).select('-password');
+      }
+
+      req.user.role = role;
       next();
     } catch (error) {
+      console.error(error);
       res.status(401).json({ message: 'Not authorized, token failed' });
     }
   } else {
@@ -29,15 +36,13 @@ const protect = async (req, res, next) => {
   }
 };
 
-// Middleware to restrict access to specific roles
-const authorize = (...roles) => {
+export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.role)) {
-      return res.status(403).json({ message: `Role '${req.role}' is not authorized to access this route` });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: `User role ${req.user.role} is not authorized to access this route`,
+      });
     }
     next();
   };
 };
-
-
-export { protect, authorize };

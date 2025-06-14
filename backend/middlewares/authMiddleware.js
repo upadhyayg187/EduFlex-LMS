@@ -1,5 +1,3 @@
-// backend/middlewares/authMiddleware.js
-
 import jwt from 'jsonwebtoken';
 import Admin from '../models/adminModel.js';
 import Company from '../models/companyModel.js';
@@ -8,31 +6,39 @@ import Student from '../models/studentModel.js';
 export const protect = async (req, res, next) => {
   let token;
 
-  if (
+  // ✅ Check token in cookie first
+  if (req.cookies && req.cookies.jwt) {
+    token = req.cookies.jwt;
+  }
+  // 🔄 Alternatively, still allow Authorization header as fallback
+  else if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const { id, role } = decoded;
+    token = req.headers.authorization.split(' ')[1];
+  }
 
-      if (role === 'admin') {
-        req.user = await Admin.findById(id).select('-password');
-      } else if (role === 'company') {
-        req.user = await Company.findById(id).select('-password');
-      } else if (role === 'student') {
-        req.user = await Student.findById(id).select('-password');
-      }
+  if (!token) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
+  }
 
-      req.user.role = role;
-      next();
-    } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id, role } = decoded;
+
+    if (role === 'admin') {
+      req.user = await Admin.findById(id).select('-password');
+    } else if (role === 'company') {
+      req.user = await Company.findById(id).select('-password');
+    } else if (role === 'student') {
+      req.user = await Student.findById(id).select('-password');
     }
-  } else {
-    res.status(401).json({ message: 'Not authorized, no token' });
+
+    req.user.role = role;
+    next();
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };
 

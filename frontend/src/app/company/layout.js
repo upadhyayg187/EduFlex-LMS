@@ -1,21 +1,17 @@
-// /app/company/dashboard/layout.jsx
+// src/app/company/layout.js
 'use client';
 
-import Sidebar from '@/components/company/Sidebar'; 
-import Header from '@/components/company/Header';   
+import Sidebar from '@/components/company/Sidebar';
+import Header from '@/components/company/Header';
 import React from 'react';
 
-export default function DashboardLayout({ children }) {
+export default function CompanyLayout({ children }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-
       <div className="flex-1 flex flex-col">
-        {/* Optional top bar */}
-        {/* <Header /> */}
-        <main className="flex-1 p-4">
-          {children}
-        </main>
+        <Header />
+        <main className="p-4 bg-gray-50 flex-1">{children}</main>
       </div>
     </div>
   );

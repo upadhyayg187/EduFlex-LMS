@@ -1,4 +1,3 @@
-// backend/config/cloudinary.js
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
@@ -9,25 +8,31 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Unified dynamic storage for thumbnail and video uploads
 const storage = new CloudinaryStorage({
-  cloudinary,
-  params: (req, file) => {
-    if (file.fieldname === 'video') {
-      return {
-        folder: 'lms-videos',
-        resource_type: 'video',
-        allowed_formats: ['mp4', 'mov', 'avi'],
-      };
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    let folder;
+    let resource_type = 'auto';
+
+    // Correctly checks for 'videos' (plural) from the frontend form
+    if (file.fieldname === 'videos') {
+      folder = 'lms-videos';
+      resource_type = 'video';
     } else if (file.fieldname === 'thumbnail') {
-      return {
-        folder: 'lms-thumbnails',
-        allowed_formats: ['jpeg', 'png', 'jpg'],
-      };
+      folder = 'lms-thumbnails';
+      resource_type = 'image';
+    } else {
+      folder = 'lms-others';
     }
+    
+    return {
+      folder: folder,
+      resource_type: resource_type,
+      public_id: file.originalname.split('.')[0] + '_' + Date.now(),
+    };
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-export { cloudinary, upload };
+export { upload };

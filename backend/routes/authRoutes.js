@@ -1,8 +1,12 @@
 import express from 'express';
-const router = express.Router();
-import { loginUser, logoutUser } from '../controllers/authController.js';
+// Correctly import all necessary functions, including the new logoutUser
+import { loginUser, registerCompany, registerStudent, logoutUser } from '../controllers/authController.js';
 
-router.post('/Login', loginUser);
-router.post('/Logout', logoutUser); // We'll use this later
+const router = express.Router();
+
+router.post('/login', loginUser);
+router.post('/logout', logoutUser); // The route for logging out
+router.post('/company/signup', registerCompany);
+router.post('/student/signup', registerStudent);
 
 export default router;

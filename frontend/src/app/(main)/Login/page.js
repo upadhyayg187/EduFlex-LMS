@@ -1,4 +1,3 @@
-// ✅ 1. Login Page (src/app/(main)/login-page.js)
 'use client';
 
 import { useState } from 'react';
@@ -30,12 +29,20 @@ export default function LoginPage() {
         toast.success('Login successful!');
         resetForm();
 
-        // ✅ Save user data to localStorage
+        // --- THE FIX IS HERE ---
+        // 1. Save the full user object (you were already doing this)
         localStorage.setItem('eduflex-user', JSON.stringify(data));
 
+        // 2. ALSO save just the token under the correct key (this is the new line)
+        localStorage.setItem('userToken', data.token);
+        // --- END OF FIX ---
+
+
+        // Redirect based on role
         if (data.role === 'admin') router.push('/admin/dashboard');
         else if (data.role === 'company') router.push('/company/dashboard');
         else router.push('/student/dashboard');
+
       } catch (error) {
         toast.dismiss(loadingToast);
         toast.error(error.response?.data?.message || 'Login failed');

@@ -1,60 +1,36 @@
 import mongoose from 'mongoose';
 
-const videoSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  url: {
-    type: String,
-    required: true,
-  },
-  public_id: {
-    type: String,
-    required: true, // Cloudinary file ID
-  },
-}, { _id: false }); // Optional: omit _id for subdocs
-
-const courseSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: [true, 'Course title is required'],
-    trim: true,
-  },
-  description: {
-    type: String,
-    required: [true, 'Course description is required'],
-  },
-  thumbnail: {
-    url: {
-      type: String,
-      required: [true, 'Thumbnail URL is required'],
-    },
-    public_id: {
-      type: String,
-      required: [true, 'Thumbnail public_id is required'],
-    },
-  },
-  videos: {
-    type: [videoSchema],
-    default: [],
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
-    required: [true, 'Course must be associated with a company'],
-  },
-  students: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Student',
-    default: [],
-  },
-}, {
-  timestamps: true,
+const lessonSchema = mongoose.Schema({
+  title: { type: String, required: true },
+  videoUrl: { type: String, required: true },
+  videoPublicId: { type: String, required: true },
 });
 
-// Optional: Add text index for search functionality
-courseSchema.index({ title: 'text', description: 'text' });
+const sectionSchema = mongoose.Schema({
+  title: { type: String, required: true },
+  lessons: [lessonSchema],
+});
+
+const courseSchema = mongoose.Schema({
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    level: { type: String, required: true },
+    tags: { type: [String] },
+    price: { type: Number, required: true, default: 0 },
+    offerCertificate: { type: Boolean, default: false },
+    status: { type: String, enum: ['Draft', 'Published'], default: 'Published' },
+    thumbnail: {
+      url: { type: String, required: true },
+      public_id: { type: String, required: true },
+    },
+    curriculum: [sectionSchema],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'Company',
+    },
+}, { timestamps: true });
 
 const Course = mongoose.model('Course', courseSchema);
+
 export default Course;

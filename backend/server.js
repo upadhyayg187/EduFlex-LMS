@@ -1,42 +1,48 @@
-import express from 'express';
 import dotenv from 'dotenv';
+// --- THIS IS THE FIX ---
+// Load environment variables right at the top, before any other imports.
+dotenv.config();
+
+import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 
 // Import Routes
 import authRoutes from './routes/authRoutes.js';
+import courseRoutes from './routes/courseRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import companyRoutes from './routes/companyRoutes.js';
-// import adminRoutes from './routes/adminRoutes.js';
-import courseRoutes from './routes/courseRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
+// import adminRoutes from './routes/adminRoutes.js';
 
-dotenv.config();
+// Connect to the database
 connectDB();
 
 const app = express();
 
-// Allow frontend to connect (adjust URL if deployed)
+// CORS configuration to allow credentials from your frontend
 const corsOptions = {
   origin: 'http://localhost:3000',
   credentials: true,
 };
 
+// Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(express.json()); // To parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // To parse URL-encoded bodies
+app.use(cookieParser()); // To parse cookies
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/courses', courseRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/companies', companyRoutes);
-// app.use('/api/admin', adminRoutes);
-app.use('/api/courses', courseRoutes);
 app.use('/api/feedback', feedbackRoutes);
+// app.use('/api/admin', adminRoutes);
 
-app.get('/', (req, res) => res.send('API is running...'));
+// Test Route
+app.get('/', (req, res) => res.send('API is running successfully...'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

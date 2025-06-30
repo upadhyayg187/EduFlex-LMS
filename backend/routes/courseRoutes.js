@@ -1,25 +1,23 @@
-/*
-
-LOCATION: backend/routes/courseRoutes.js
-
-*/
 import express from 'express';
-// Import all necessary controller functions
-import { createCourse, getCompanyCourses, deleteCourse } from '../controllers/courseController.js';
+import { 
+    createCourse, 
+    getCompanyCourses, 
+    deleteCourse,
+    getCourseByIdForOwner,
+    updateCourse,
+    getPublicCourseById 
+} from '../controllers/courseController.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
-// This single route path ('/') handles two different HTTP methods:
-// GET: Fetches all courses for the logged-in company.
-// POST: Creates a new course.
+// --- PUBLIC ROUTE ---
+router.route('/public/:id').get(getPublicCourseById);
+
+// --- COMPANY-PROTECTED ROUTES ---
 router.route('/')
-    .get(
-        protect,
-        authorize('company'),
-        getCompanyCourses
-    )
+    .get(protect, authorize('company'), getCompanyCourses)
     .post(
         protect,
         authorize('company'),
@@ -30,14 +28,21 @@ router.route('/')
         createCourse
     );
 
-// This route handles actions for a specific course by its ID.
-// DELETE: Deletes a specific course.
-// You can add GET (for a single course) and PUT (for updates) here later.
 router.route('/:id')
-    .delete(
+    .get(protect, authorize('company'), getCourseByIdForOwner)
+    // --- THIS IS THE FIX ---
+    // The middleware is now changed from upload.single() to upload.fields()
+    // to accept both a thumbnail and new videos during an update.
+    .put(
         protect,
         authorize('company'),
-        deleteCourse
-    );
+        upload.fields([
+            { name: 'thumbnail', maxCount: 1 },
+            { name: 'videos' } // Allow multiple new videos
+        ]),
+        updateCourse
+    )
+    // --- END OF FIX ---
+    .delete(protect, authorize('company'), deleteCourse);
 
 export default router;

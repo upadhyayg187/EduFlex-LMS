@@ -1,28 +1,29 @@
 import mongoose from 'mongoose';
 
 const assignmentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  dueDate: Date,
+  title: { 
+    type: String, 
+    required: true,
+    trim: true,
+  },
+  description: { 
+    type: String 
+  },
   course: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
     required: true,
   },
-  student: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student',
-    required: true,
+  dueDate: { 
+    type: Date 
   },
-  status: {
-    type: String,
-    enum: ['submitted', 'pending', 'graded'],
-    default: 'pending',
+  createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'Company',
   },
-  submissionFile: String,
 }, { timestamps: true });
 
 const Assignment = mongoose.model('Assignment', assignmentSchema);
 
-// ✅ THIS LINE IS IMPORTANT
 export default Assignment;

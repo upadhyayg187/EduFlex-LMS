@@ -1,4 +1,4 @@
-// src/components/company/Sidebar.js
+
 'use client';
 
 import Link from 'next/link';
@@ -31,7 +31,6 @@ const bottomNavItems = [
     { label: 'Support', href: '/company/support', icon: LifeBuoy },
 ];
 
-// New Professional Logo Component
 const Logo = () => (
     <div className="flex items-center gap-x-3">
         <div className="bg-blue-600 p-2 rounded-lg">
@@ -46,7 +45,6 @@ const Logo = () => (
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const user = useUser();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -65,7 +63,6 @@ export default function Sidebar() {
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-7">
             <li>
-                {/* THE ONLY CHANGE IS IN THE LINE BELOW: `focus-visible:outline` has been removed. */}
                 <Link href="/company/create-course" className="flex items-center justify-center gap-x-3 rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                     <PlusCircle className="-ml-0.5 h-5 w-5" aria-hidden="true" />
                     Create New Course
@@ -81,7 +78,7 @@ export default function Sidebar() {
                       <Link
                         href={item.href}
                         className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
-                          pathname === item.href // Use strict equality for perfect matching
+                          pathname === item.href
                             ? 'bg-gray-100 text-blue-600'
                             : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
                         }`}
@@ -119,7 +116,8 @@ export default function Sidebar() {
             </li>
             <li className="mt-auto">
                 <div className="-mx-2 space-y-1 pt-4 border-t border-gray-100">
-                    <Link href="/company/profile" className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
+                    {/* --- THIS IS THE FIX --- */}
+                    <Link href="/company/settings" className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
                         <Settings className="h-6 w-6 shrink-0" />
                         Settings
                     </Link>

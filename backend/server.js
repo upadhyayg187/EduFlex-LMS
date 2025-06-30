@@ -14,6 +14,11 @@ import courseRoutes from './routes/courseRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import companyRoutes from './routes/companyRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
+import assignmentRoutes from './routes/assignmentRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import supportRoutes from './routes/supportRoutes.js'; // <-- ADD THIS LINE
+import aiSupportRoutes from './routes/aiSupportRoutes.js'; // <-- ADD THIS LINE
+
 // import adminRoutes from './routes/adminRoutes.js';
 
 // Connect to the database
@@ -39,6 +44,11 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/support', supportRoutes); // <-- ADD THIS LINE
+app.use('/api/ai-support', aiSupportRoutes);
+
 // app.use('/api/admin', adminRoutes);
 
 // Test Route

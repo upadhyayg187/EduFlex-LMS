@@ -6,9 +6,6 @@ const companySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  industry: {
-    type: String,
-  },
   email: {
     type: String,
     required: true,
@@ -17,7 +14,14 @@ const companySchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-  }
+  },
+  avatar: {
+    url: { type: String, default: '' },
+    public_id: { type: String, default: '' },
+  },
+  industry: {
+    type: String,
+  },
 }, { timestamps: true });
 
 // Hash the password before saving

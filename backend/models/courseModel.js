@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 
 const lessonSchema = mongoose.Schema({
   title: { type: String, required: true },
-  videoUrl: { type: String, required: true },
-  videoPublicId: { type: String, required: true },
+  videoUrl: { type: String, default: '' },
+  videoPublicId: { type: String, default: '' },
 });
 
 const sectionSchema = mongoose.Schema({
@@ -18,10 +18,11 @@ const courseSchema = mongoose.Schema({
     tags: { type: [String] },
     price: { type: Number, required: true, default: 0 },
     offerCertificate: { type: Boolean, default: false },
-    status: { type: String, enum: ['Draft', 'Published'], default: 'Published' },
+    // Default status is now 'Draft', which is safer and makes more sense.
+    status: { type: String, enum: ['Draft', 'Published'], default: 'Draft' }, 
     thumbnail: {
-      url: { type: String, required: true },
-      public_id: { type: String, required: true },
+      url: { type: String, default: '' },
+      public_id: { type: String, default: '' },
     },
     curriculum: [sectionSchema],
     createdBy: {

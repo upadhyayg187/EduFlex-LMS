@@ -1,62 +1,96 @@
 import Company from '../models/companyModel.js';
-import generateToken from '../utils/generateToken.js';
-import bcrypt from 'bcryptjs';
+import { v2 as cloudinary } from 'cloudinary';
+import asyncHandler from 'express-async-handler';
+import jwt from 'jsonwebtoken';
+
+const generateToken = (userId, role) => {
+    return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+};
 
 // @desc    Register a new company
-// @route   POST /api/companies/signup
-// @access  Public
-const registerCompany = async (req, res) => {
-  try {
+export const registerCompany = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
-
     const companyExists = await Company.findOne({ email });
     if (companyExists) {
-      return res.status(400).json({ message: 'Company already exists' });
+        res.status(400);
+        throw new Error('Company with this email already exists');
     }
-
     const company = await Company.create({ name, email, password });
-
     if (company) {
-      generateToken(res, company._id, 'company');
-      res.status(201).json({
-        _id: company._id,
-        name: company.name,
-        email: company.email,
-        role: 'company',
-      });
+        const token = generateToken(company._id, 'company');
+        res.status(201).json({
+            _id: company._id,
+            name: company.name,
+            email: company.email,
+            role: 'company',
+            token: token,
+        });
     } else {
-      res.status(400).json({ message: 'Invalid company data' });
+        res.status(400);
+        throw new Error('Invalid company data');
     }
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+});
+
+// @desc    Get the logged-in company's profile
+export const getCompanyProfile = asyncHandler(async (req, res) => {
+    const company = await Company.findById(req.user._id).select('-password');
+    if (company) {
+        res.json(company);
+    } else {
+        res.status(404);
+        throw new Error('Company not found');
+    }
+});
+
+// @desc    Update the logged-in company's profile
+export const updateCompanyProfile = asyncHandler(async (req, res) => {
+    const company = await Company.findById(req.user._id);
+    if (company) {
+        company.name = req.body.name || company.name;
+        company.industry = req.body.industry || company.industry;
+
+        if (req.body.email && req.body.email !== company.email) {
+            res.status(400);
+            throw new Error('Email address cannot be changed.');
+        }
+
+        if (req.file) {
+            if (company.avatar && company.avatar.public_id) {
+                await cloudinary.uploader.destroy(company.avatar.public_id);
+            }
+            company.avatar = {
+                url: req.file.path,
+                public_id: req.file.filename,
+            };
+        }
+
+        const updatedCompany = await company.save();
+        res.json({
+            _id: updatedCompany._id,
+            name: updatedCompany.name,
+            email: updatedCompany.email,
+            avatar: updatedCompany.avatar,
+            industry: updatedCompany.industry,
+        });
+    } else {
+        res.status(404);
+        throw new Error('Company not found');
+    }
+});
 
 // @desc    Update company password
-// @route   POST /api/companies/update-password
-// @access  Private (Company only)
-const updateCompanyPassword = async (req, res) => {
-  try {
-    const companyId = req.user._id;
-    const { currentPassword, newPassword } = req.body;
-
-    const company = await Company.findById(companyId);
+export const updateCompanyPassword = asyncHandler(async (req, res) => {
+    const company = await Company.findById(req.user._id);
     if (!company) {
-      return res.status(404).json({ message: 'Company not found' });
+        res.status(404);
+        throw new Error('Company not found');
     }
-
-    const isMatch = await bcrypt.compare(currentPassword, company.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
+    const { currentPassword, newPassword } = req.body;
+    if (!(await company.matchPassword(currentPassword))) {
+        res.status(401);
+        throw new Error('Invalid current password');
     }
-
     company.password = newPassword;
     await company.save();
-
-    res.status(200).json({ message: 'Password updated successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to update password' });
-  }
-};
-
-export { registerCompany, updateCompanyPassword };
+    res.json({ message: 'Password updated successfully' });
+});

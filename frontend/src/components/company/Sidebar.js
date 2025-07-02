@@ -1,22 +1,13 @@
-
 'use client';
 
+import { Fragment } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useUser } from '@/context/UserContext';
 import {
-  Home,
-  BookCopy,
-  Users,
-  ClipboardList,
-  Star,
-  Bell,
-  Settings,
-  LogOut,
-  PlusCircle,
-  LifeBuoy,
+  Home, BookCopy, Users, ClipboardList, Star, Bell, Settings, LogOut, PlusCircle, LifeBuoy, X
 } from 'lucide-react';
-import useUser from '@/hooks/useUser';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 const navItems = [
   { label: 'Dashboard', href: '/company/dashboard', icon: Home },
@@ -43,93 +34,94 @@ const Logo = () => (
     </div>
 );
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
+const NavLink = ({ item, pathname, onClick }) => {
+    const Icon = item.icon;
+    const isActive = pathname === item.href || (item.href !== '/company/dashboard' && pathname.startsWith(item.href));
+    return (
+        <li>
+            <Link href={item.href} onClick={onClick}
+                className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
+                    isActive ? 'bg-gray-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+            >
+                <Icon className="h-6 w-6 shrink-0" />
+                {item.label}
+            </Link>
+        </li>
+    );
+};
 
-  const handleLogout = () => {
-    localStorage.removeItem('eduflex-user');
-    toast.success('Successfully logged out!');
-    router.push('/Login');
-  };
+export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
+    const pathname = usePathname();
+    const { logout } = useUser();
 
-  return (
-    <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
-        <div className="flex h-16 shrink-0 items-center">
-            <Logo />
-        </div>
-        
-        <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
-            <li>
-                <Link href="/company/create-course" className="flex items-center justify-center gap-x-3 rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-                    <PlusCircle className="-ml-0.5 h-5 w-5" aria-hidden="true" />
-                    Create New Course
-                </Link>
-            </li>
-            <li>
-              <div className="text-xs font-semibold leading-6 text-gray-400">Main Menu</div>
-              <ul role="list" className="-mx-2 mt-2 space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.label}>
-                      <Link
-                        href={item.href}
-                        className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
-                          pathname === item.href
-                            ? 'bg-gray-100 text-blue-600'
-                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Icon className="h-6 w-6 shrink-0" />
-                        {item.label}
-                      </Link>
+    const handleLogout = () => {
+        toast.success('Logged out successfully!');
+        logout();
+    };
+
+    const sidebarContent = (
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
+            <div className="flex h-16 shrink-0 items-center">
+                <Logo />
+            </div>
+            <nav className="flex flex-1 flex-col">
+                <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                    <li>
+                        {/* --- FIX: Corrected the href path --- */}
+                        <Link href="/company/create-course" onClick={() => setSidebarOpen(false)} className="flex items-center justify-center gap-x-3 rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                            <PlusCircle className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+                            Create New Course
+                        </Link>
                     </li>
-                  );
-                })}
-              </ul>
-            </li>
-            <li>
-                <div className="text-xs font-semibold leading-6 text-gray-400">Tools & Help</div>
-                <ul role="list" className="-mx-2 mt-2 space-y-1">
-                 {bottomNavItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.label}>
-                      <Link
-                        href={item.href}
-                        className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
-                          pathname === item.href
-                            ? 'bg-gray-100 text-blue-600'
-                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Icon className="h-6 w-6 shrink-0" />
-                        {item.label}
-                      </Link>
+                    <li>
+                        <div className="text-xs font-semibold leading-6 text-gray-400">Main Menu</div>
+                        <ul role="list" className="-mx-2 mt-2 space-y-1">
+                            {navItems.map((item) => <NavLink key={item.label} item={item} pathname={pathname} onClick={() => setSidebarOpen(false)} />)}
+                        </ul>
                     </li>
-                  );
-                })}
+                    <li>
+                        <div className="text-xs font-semibold leading-6 text-gray-400">Tools & Help</div>
+                        <ul role="list" className="-mx-2 mt-2 space-y-1">
+                            {bottomNavItems.map((item) => <NavLink key={item.label} item={item} pathname={pathname} onClick={() => setSidebarOpen(false)} />)}
+                        </ul>
+                    </li>
+                    <li className="mt-auto">
+                        <div className="-mx-2 space-y-1 pt-4 border-t border-gray-100">
+                            <Link href="/company/settings" onClick={() => setSidebarOpen(false)} className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
+                                <Settings className="h-6 w-6 shrink-0" /> Settings
+                            </Link>
+                            <button onClick={handleLogout} className="w-full group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
+                                <LogOut className="h-6 w-6 shrink-0" /> Logout
+                            </button>
+                        </div>
+                    </li>
                 </ul>
-            </li>
-            <li className="mt-auto">
-                <div className="-mx-2 space-y-1 pt-4 border-t border-gray-100">
-                    {/* --- THIS IS THE FIX --- */}
-                    <Link href="/company/settings" className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
-                        <Settings className="h-6 w-6 shrink-0" />
-                        Settings
-                    </Link>
-                    <button onClick={handleLogout} className="w-full group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
-                        <LogOut className="h-6 w-6 shrink-0" />
-                        Logout
-                    </button>
+            </nav>
+        </div>
+    );
+
+    return (
+        <>
+            {/* Mobile sidebar */}
+            <div className={`relative z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
+                <div className="fixed inset-0 bg-gray-900/80" />
+                <div className="fixed inset-0 flex">
+                    <div className="relative mr-16 flex w-full max-w-xs flex-1">
+                        <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
+                            <button type="button" className="-m-2.5 p-2.5" onClick={() => setSidebarOpen(false)}>
+                                <X className="h-6 w-6 text-white" />
+                            </button>
+                        </div>
+                        {sidebarContent}
+                    </div>
                 </div>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </aside>
-  );
+            </div>
+
+            {/* Static sidebar for desktop */}
+            <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+                {sidebarContent}
+            </div>
+        </>
+    );
 }

@@ -105,7 +105,7 @@ export default function ManageCoursesPage() {
                                 <tr key={course._id} className="hover:bg-gray-50">
                                     <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm sm:w-auto sm:max-w-none sm:pl-6">
                                         <div className="flex items-center gap-4">
-                                            <img src={course.thumbnail.url || '[https://placehold.co/112x64/e0e7ff/3730a3?text=No-Image](https://placehold.co/112x64/e0e7ff/3730a3?text=No-Image)'} alt={course.title} className="h-16 w-28 rounded-md object-cover"/>
+                                            <img src={course.thumbnail?.url || 'https://placehold.co/112x64/e0e7ff/3730a3?text=No-Image'} alt={course.title} className="h-16 w-28 rounded-md object-cover"/>
                                             <div>
                                                 <div className="font-medium text-gray-900">{course.title}</div>
                                                 <div className="text-gray-500">{new Date(course.createdAt).toLocaleDateString()}</div>
@@ -125,14 +125,21 @@ export default function ManageCoursesPage() {
                                          }`}>{course.status}</span>
                                     </td>
                                     <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                       {/* --- FIX: Updated Link components to modern syntax --- */}
                                        <div className="relative flex items-center justify-end gap-2">
-                                            <Link href={`/courses/${course._id}`} passHref><button className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100" title="View Course"><Eye size={18} /></button></Link>
-                                            <Link href={`/company/courses/edit/${course._id}`} passHref><button className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100" title="Edit Course"><Edit size={18} /></button></Link>
-                                            <button onClick={() => openDeleteModal(course)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" title="Delete Course"><Trash2 size={18} /></button>
+                                            <Link href={`/courses/${course._id}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100" title="View Course">
+                                                <Eye size={18} />
+                                            </Link>
+                                            <Link href={`/company/courses/edit/${course._id}`} className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100" title="Edit Course">
+                                                <Edit size={18} />
+                                            </Link>
+                                            <button onClick={() => openDeleteModal(course)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" title="Delete Course">
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                            )})}
+                                )})}
                         </tbody>
                     </table>
                 </div>

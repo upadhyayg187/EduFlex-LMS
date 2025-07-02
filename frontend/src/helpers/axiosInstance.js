@@ -8,6 +8,7 @@ const axiosInstance = axios.create({
 // Interceptor to add the token to every outgoing request
 axiosInstance.interceptors.request.use(
   (config) => {
+    // This now works because the token is correctly saved to 'userToken'
     const token = localStorage.getItem('userToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;

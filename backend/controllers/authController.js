@@ -42,6 +42,9 @@ export const loginUser = async (req, res) => {
                 email: user.email,
                 role: role,
                 token: token,
+                createdAt: user.createdAt, // --- FIX: Add createdAt field ---
+                avatar: user.avatar, // Also send avatar on login
+                industry: user.industry // Also send industry on login
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password.' });
@@ -52,14 +55,10 @@ export const loginUser = async (req, res) => {
     }
 };
 
-// --- THIS IS THE NEW FUNCTION THAT FIXES THE ERROR ---
 // @desc    Logout user / clear cookie
 // @route   POST /api/auth/logout
 // @access  Public
 export const logoutUser = (req, res) => {
-    // Your frontend handles localStorage removal. The backend's job is to
-    // handle any server-side session or cookie invalidation if you use them.
-    // For now, we just send a success message.
     res.status(200).json({ message: 'Logout successful' });
 };
 
@@ -85,6 +84,7 @@ export const registerCompany = async (req, res) => {
                 email: company.email,
                 role: 'company',
                 token: token,
+                createdAt: company.createdAt // --- FIX: Add createdAt field ---
             });
         } else {
              res.status(400).json({ message: 'Invalid company data.' });
@@ -114,6 +114,7 @@ export const registerStudent = async (req, res) => {
                 email: student.email,
                 role: 'student',
                 token: token,
+                createdAt: student.createdAt // --- FIX: Add createdAt field ---
             });
         } else {
              res.status(400).json({ message: 'Invalid student data.' });

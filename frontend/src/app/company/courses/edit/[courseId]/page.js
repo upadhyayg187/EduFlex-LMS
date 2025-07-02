@@ -8,10 +8,14 @@ import axiosInstance from '@/helpers/axiosInstance';
 import { toast, Toaster } from 'react-hot-toast';
 import { Upload, Tag, Info, Book, GripVertical, Trash, Plus, Film } from 'lucide-react';
 
-const RichTextEditor = ({ value, onChange, placeholder }) => (
+const RichTextEditor = ({ name, value, onChange, placeholder }) => (
     <textarea
+        name={name}
         className="w-full h-32 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-        value={value} onChange={onChange} placeholder={placeholder} />
+        value={value} 
+        onChange={onChange} 
+        placeholder={placeholder} 
+    />
 );
 
 export default function EditCoursePage() {
@@ -55,19 +59,18 @@ export default function EditCoursePage() {
             }));
             formData.append('curriculum', JSON.stringify(curriculumMetadata));
 
-            // Append other fields that have been touched (changed)
-            Object.keys(values).forEach(key => {
-                if (formik.touched[key] || key === 'status') {
-                    if (key !== 'curriculum' && key !== 'thumbnail' && key !== 'isPaid') {
-                        formData.append(key, values[key]);
-                    }
-                }
-            });
+            formData.append('title', values.title);
+            formData.append('description', values.description);
+            formData.append('level', values.level);
+            formData.append('tags', values.tags);
+            formData.append('price', values.price);
+            formData.append('offerCertificate', values.offerCertificate);
+            formData.append('status', values.status);
+
             if (values.thumbnail) {
                 formData.append('thumbnail', values.thumbnail);
             }
             
-            // Append only newly added videos
             values.curriculum.forEach(section => {
                 section.lessons.forEach(lesson => {
                     if (lesson.video && !lesson._id) {
@@ -118,9 +121,49 @@ export default function EditCoursePage() {
             }
         };
         fetchCourseData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId]);
 
-    // Helper functions for curriculum management
+    // --- FIX IS HERE ---
+    // The validation logic is now centralized in this function before submission.
+    const handleFormSubmit = async (statusToSet) => {
+        // Run stricter validation only when the user intends to publish.
+        if (statusToSet === 'Published') {
+            if (!formik.values.thumbnail && !thumbnailPreview) {
+                toast.error('A thumbnail is required to publish.');
+                return;
+            }
+            if (!formik.values.description?.trim()) {
+                toast.error('A course description is required to publish.');
+                setActiveSection('info'); // Switch to the relevant section
+                return;
+            }
+            if (!formik.values.tags?.trim()) {
+                toast.error('At least one tag is required to publish.');
+                setActiveSection('info');
+                return;
+            }
+            if (formik.values.curriculum.length === 0 || formik.values.curriculum.some(s => s.lessons.length === 0)) {
+                toast.error('The course must have at least one section, and each section must have at least one lesson.');
+                setActiveSection('curriculum');
+                return;
+            }
+            const hasMissingVideo = formik.values.curriculum.some(section =>
+                section.lessons.some(lesson => !lesson.videoUrl && !lesson.video)
+            );
+            if (hasMissingVideo) {
+                toast.error('Every lesson must have a video to publish the course.');
+                setActiveSection('curriculum');
+                return;
+            }
+        }
+        
+        // If validation passes (or if saving a draft), proceed with submission.
+        await formik.setFieldValue('status', statusToSet);
+        formik.handleSubmit();
+    };
+    // --- END OF FIX ---
+
     const addSection = () => {
         formik.setFieldValue('curriculum', [...formik.values.curriculum, { id: Date.now(), title: 'New Section', lessons: [] }]);
     };
@@ -149,7 +192,7 @@ export default function EditCoursePage() {
     return (
         <div className="space-y-8">
             <Toaster position="top-center" />
-            <form onSubmit={formik.handleSubmit}>
+            <form onSubmit={(e) => e.preventDefault()}>
                 <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
                     <aside className="lg:col-span-3 lg:sticky lg:top-24 h-fit">
                         <nav className="space-y-2">
@@ -261,8 +304,12 @@ export default function EditCoursePage() {
                 </div>
                 <div className="mt-8 pt-5 border-t border-gray-200 flex justify-end gap-4">
                     <button type="button" onClick={() => router.back()} className="py-2 px-5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg shadow-sm">Cancel</button>
-                    <button type="submit" disabled={formik.isSubmitting} className="py-2 px-5 bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-gray-400">
-                        {formik.isSubmitting ? 'Updating...' : 'Save Changes'}
+                    
+                    <button type="button" onClick={() => handleFormSubmit('Draft')} disabled={formik.isSubmitting} className="py-2 px-5 bg-gray-600 text-white font-semibold rounded-lg shadow-sm hover:bg-gray-700 disabled:bg-gray-400">
+                        {formik.isSubmitting && formik.values.status === 'Draft' ? 'Saving...' : 'Save Draft'}
+                    </button>
+                    <button type="button" onClick={() => handleFormSubmit('Published')} disabled={formik.isSubmitting} className="py-2 px-5 bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-gray-400">
+                        {formik.isSubmitting && formik.values.status === 'Published' ? 'Publishing...' : 'Save & Publish'}
                     </button>
                 </div>
             </form>

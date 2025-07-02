@@ -1,11 +1,12 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
+import config from './config.js'; // Import our new config
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: config.cloudinaryCloudName,
+  api_key: config.cloudinaryApiKey,
+  api_secret: config.cloudinaryApiSecret,
 });
 
 const storage = new CloudinaryStorage({
@@ -14,11 +15,10 @@ const storage = new CloudinaryStorage({
     let folder;
     let resource_type = 'auto';
 
-    // Correctly checks for 'videos' (plural) from the frontend form
     if (file.fieldname === 'videos') {
       folder = 'lms-videos';
       resource_type = 'video';
-    } else if (file.fieldname === 'thumbnail') {
+    } else if (file.fieldname === 'thumbnail' || file.fieldname === 'avatar') {
       folder = 'lms-thumbnails';
       resource_type = 'image';
     } else {

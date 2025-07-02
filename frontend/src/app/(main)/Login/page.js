@@ -1,122 +1,126 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import toast, { Toaster } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import axiosInstance from '@/helpers/axiosInstance';
+import { useUser } from '@/context/UserContext';
+import { Mail, Lock, User, Building, Shield } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { IconMail, IconLock } from '@tabler/icons-react';
 
+// A new component to handle the logic, as hooks like useSearchParams can only be used in Client Components wrapped in a Suspense boundary.
+function LoginForm() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const { updateUser } = useUser();
+    const [role, setRole] = useState('student');
+
+    useEffect(() => {
+        const roleFromUrl = searchParams.get('role');
+        if (['student', 'company', 'admin'].includes(roleFromUrl)) {
+            setRole(roleFromUrl);
+        }
+    }, [searchParams]);
+
+    const formik = useFormik({
+        initialValues: { email: '', password: '' },
+        validationSchema: Yup.object({
+            email: Yup.string().email('Invalid email address').required('Email is required'),
+            password: Yup.string().required('Password is required'),
+        }),
+        onSubmit: async (values, { setSubmitting }) => {
+            const toastId = toast.loading('Logging in...');
+            try {
+                const { data } = await axiosInstance.post('/auth/login', { ...values, role });
+                updateUser(data); // Update global user state
+                toast.success('Login successful!', { id: toastId });
+
+                // Redirect based on role
+                if (data.role === 'admin') {
+                    router.push('/admin/dashboard');
+                } else if (data.role === 'company') {
+                    router.push('/company/dashboard');
+                } else {
+                    router.push('/student/dashboard');
+                }
+            } catch (error) {
+                toast.error(error.response?.data?.message || 'Login failed', { id: toastId });
+                setSubmitting(false);
+            }
+        },
+    });
+
+    const roles = [
+        { name: 'student', label: 'Student', icon: User },
+        { name: 'company', label: 'Company', icon: Building },
+        { name: 'admin', label: 'Admin', icon: Shield },
+    ];
+
+    return (
+        <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-2xl">
+            <div className="text-center">
+                <h1 className="text-3xl font-bold text-gray-900">Welcome Back!</h1>
+                <p className="mt-2 text-gray-600">Log in to continue to your dashboard.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 p-1 rounded-lg bg-gray-100">
+                {roles.map((r) => (
+                    <button key={r.name} onClick={() => setRole(r.name)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${role === r.name ? 'bg-white text-blue-600 shadow' : 'text-gray-500 hover:bg-white/50'}`}>
+                        {r.label}
+                    </button>
+                ))}
+            </div>
+
+            <form onSubmit={formik.handleSubmit} className="space-y-6">
+                <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    value={formik.values.email}
+                    error={formik.touched.email && formik.errors.email}
+                    icon={Mail}
+                />
+                <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    value={formik.values.password}
+                    error={formik.touched.password && formik.errors.password}
+                    icon={Lock}
+                />
+                <Button type="submit" fullWidth disabled={formik.isSubmitting}>
+                    {formik.isSubmitting ? 'Logging In...' : 'Login'}
+                </Button>
+            </form>
+            <p className="text-sm text-center text-gray-500">
+                Don't have an account?{' '}
+                <Link href="/signup" className="font-semibold text-blue-600 hover:underline">
+                    Sign Up
+                </Link>
+            </p>
+        </div>
+    );
+}
+
+
+// The main page component that uses Suspense
 export default function LoginPage() {
-  const [role, setRole] = useState('student');
-  const router = useRouter();
-
-  const formik = useFormik({
-    initialValues: { email: '', password: '' },
-    validationSchema: Yup.object({
-      email: Yup.string().email('Invalid email address').required('Email is required'),
-      password: Yup.string().required('Password is required'),
-    }),
-    onSubmit: async (values, { setSubmitting, resetForm }) => {
-      const loadingToast = toast.loading('Logging in...');
-      try {
-        const { data } = await axiosInstance.post('/auth/login', { ...values, role });
-        toast.dismiss(loadingToast);
-        toast.success('Login successful!');
-        resetForm();
-
-        // --- THE FIX IS HERE ---
-        // 1. Save the full user object (you were already doing this)
-        localStorage.setItem('eduflex-user', JSON.stringify(data));
-
-        // 2. ALSO save just the token under the correct key (this is the new line)
-        localStorage.setItem('userToken', data.token);
-        // --- END OF FIX ---
-
-
-        // Redirect based on role
-        if (data.role === 'admin') router.push('/admin/dashboard');
-        else if (data.role === 'company') router.push('/company/dashboard');
-        else router.push('/student/dashboard');
-
-      } catch (error) {
-        toast.dismiss(loadingToast);
-        toast.error(error.response?.data?.message || 'Login failed');
-      } finally {
-        setSubmitting(false);
-      }
-    },
-  });
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Toaster position="top-center" />
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back!</h1>
-          <p className="text-gray-500 mt-2">Log in to continue to your dashboard.</p>
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+            <Toaster position="top-center" />
+            <Suspense fallback={<div>Loading...</div>}>
+                <LoginForm />
+            </Suspense>
         </div>
-
-        <div className="flex justify-center mb-6 rounded-lg p-1 bg-gray-100">
-          <button
-            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 ${role === 'student' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
-            onClick={() => setRole('student')}
-          >
-            Student
-          </button>
-          <button
-            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 ${role === 'company' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
-            onClick={() => setRole('company')}
-          >
-            Company
-          </button>
-          <button
-            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 ${role === 'admin' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
-            onClick={() => setRole('admin')}
-          >
-            Admin
-          </button>
-        </div>
-
-        <form onSubmit={formik.handleSubmit} className="space-y-5">
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="Email Address"
-            icon={IconMail}
-            value={formik.values.email}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.email && formik.errors.email}
-          />
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Password"
-            icon={IconLock}
-            value={formik.values.password}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.password && formik.errors.password}
-          />
-          <Button type="submit" disabled={formik.isSubmitting} fullWidth>
-            {formik.isSubmitting ? 'Logging In...' : 'Login'}
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-8">
-          Don't have an account?{' '}
-          <Link href="/SignUp" className="font-semibold text-blue-600 hover:text-blue-500">
-            Sign Up
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
+    );
 }

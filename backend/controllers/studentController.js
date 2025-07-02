@@ -1,11 +1,47 @@
-// controllers/studentController.js
-
 import asyncHandler from 'express-async-handler';
 import Student from '../models/studentModel.js';
 import Course from '../models/courseModel.js';
 import Assignment from '../models/assignmentModel.js';
+import Submission from '../models/submissionModel.js'; // Import Submission model
 import Notification from '../models/notificationModel.js';
 import generateToken from '../utils/generateToken.js';
+
+// --- NEW FUNCTION for the Student Dashboard ---
+// @desc    Get data for the student dashboard
+// @route   GET /api/students/dashboard
+// @access  Private/Student
+export const getDashboardData = asyncHandler(async (req, res) => {
+    const studentId = req.user._id;
+
+    // 1. Get enrolled courses
+    const enrolledCourses = await Course.find({ students: studentId })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .select('title thumbnail level');
+
+    // 2. Get total number of enrolled courses
+    const enrolledCoursesCount = await Course.countDocuments({ students: studentId });
+
+    // 3. Get assignments for enrolled courses
+    const courseIds = enrolledCourses.map(c => c._id);
+    const assignments = await Assignment.find({ course: { $in: courseIds } });
+    const assignmentIds = assignments.map(a => a._id);
+
+    // 4. Get submissions to check completion status
+    const submissions = await Submission.find({ student: studentId, assignment: { $in: assignmentIds } });
+    const submittedAssignmentIds = submissions.map(s => s.assignment.toString());
+
+    const assignmentsCompletedCount = submittedAssignmentIds.length;
+    const assignmentsPendingCount = assignments.length - assignmentsCompletedCount;
+
+    res.json({
+        enrolledCoursesCount,
+        assignmentsCompletedCount,
+        assignmentsPendingCount,
+        recentCourses: enrolledCourses
+    });
+});
+
 
 // @desc    Register a new student
 // @route   POST /api/students/signup

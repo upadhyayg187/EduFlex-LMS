@@ -18,7 +18,6 @@ const courseSchema = mongoose.Schema({
     tags: { type: [String] },
     price: { type: Number, required: true, default: 0 },
     offerCertificate: { type: Boolean, default: false },
-    // Default status is now 'Draft', which is safer and makes more sense.
     status: { type: String, enum: ['Draft', 'Published'], default: 'Draft' }, 
     thumbnail: {
       url: { type: String, default: '' },
@@ -30,6 +29,11 @@ const courseSchema = mongoose.Schema({
       required: true,
       ref: 'Company',
     },
+    // --- FIX: Added the missing students array ---
+    students: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student'
+    }]
 }, { timestamps: true });
 
 const Course = mongoose.model('Course', courseSchema);

@@ -1,103 +1,169 @@
-
 'use client';
 
-import { TrendingUp, BookOpen, Users, Star, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
-import useUser from '@/hooks/useUser';
+import { useState, useEffect } from 'react';
+import { useUser } from '@/context/UserContext';
+import axiosInstance from '@/helpers/axiosInstance';
+import { toast, Toaster } from 'react-hot-toast';
+import { TrendingUp, BookOpen, Users, Star, AlertCircle, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
 
-const stats = [
-  { name: 'Total Revenue', stat: '$71,897', change: '1.2%', changeType: 'increase', icon: TrendingUp },
-  { name: 'Active Courses', stat: '12', change: '9.1%', changeType: 'increase', icon: BookOpen },
-  { name: 'New Students (30d)', stat: '2,450', change: '4.1%', changeType: 'decrease', icon: Users },
-  { name: 'Average Rating', stat: '4.82', change: '0.6%', changeType: 'increase', icon: Star },
-]
+// Reusable Star Rating component
+const StarRating = ({ rating = 0, size = 'h-4 w-4' }) => (
+    <div className="flex items-center">
+        {[...Array(5)].map((_, index) => (
+            <Star key={index} className={`${size} ${rating > index ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+        ))}
+    </div>
+);
 
-const topCourses = [
-    { name: 'Ultimate React Masterclass', category: 'Web Development', students: '1.2k', rating: 4.9, image: '[https://placehold.co/100x60/3b82f6/ffffff?text=React](https://placehold.co/100x60/3b82f6/ffffff?text=React)' },
-    { name: 'Advanced Node.js', category: 'Backend', students: 876, rating: 4.8, image: '[https://placehold.co/100x60/10b981/ffffff?text=Node](https://placehold.co/100x60/10b981/ffffff?text=Node)' },
-    { name: 'Tailwind CSS From Scratch', category: 'UI/UX Design', students: 654, rating: 4.9, image: '[https://placehold.co/100x60/8b5cf6/ffffff?text=CSS](https://placehold.co/100x60/8b5cf6/ffffff?text=CSS)' },
-]
+// Redesigned, clickable Stat Card Component
+const StatCard = ({ title, value, icon: Icon, color, link }) => (
+    <Link href={link} className="group block bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-300">
+        <div className="flex justify-between items-start">
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color.bg} group-hover:scale-110 transition-transform`}>
+                <Icon className={`h-6 w-6 ${color.text}`} />
+            </div>
+        </div>
+        <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+    </Link>
+);
+
+// Loading Skeletons
+const StatCardSkeleton = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 animate-pulse">
+        <div className="flex justify-between items-start">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="w-12 h-12 rounded-lg bg-gray-200"></div>
+        </div>
+        <div className="h-8 bg-gray-200 rounded w-1/2 mt-2"></div>
+    </div>
+);
+
+const ChartSkeleton = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div className="h-64 bg-gray-200 rounded-md"></div>
+    </div>
+);
 
 export default function CompanyDashboard() {
-  const user = useUser();
-  const userName = user?.name || 'Admin';
+    const { user } = useUser();
+    const [stats, setStats] = useState(null);
+    const [chartData, setChartData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-  return (
-    <div className="space-y-10">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold leading-7 text-gray-900 sm:truncate sm:tracking-tight">Welcome Back, {userName} 👋</h1>
-        <p className="mt-1 text-md text-gray-600">Here's a summary of your company's performance.</p>
-      </div>
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [statsRes, chartRes] = await Promise.all([
+                    axiosInstance.get('/companies/dashboard-stats'),
+                    axiosInstance.get('/companies/dashboard-chart-data')
+                ]);
+                setStats(statsRes.data);
+                setChartData(chartRes.data);
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+                setError('Could not load dashboard data. Please try again later.');
+                toast.error('Failed to load dashboard data.');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-      {/* Stats Grid */}
-      <div>
-        <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.name} className="relative overflow-hidden rounded-lg bg-white p-5 shadow-sm border border-gray-200">
-                <dt>
-                    <div className="absolute rounded-md bg-blue-500 p-3">
-                        <Icon className="h-6 w-6 text-white" aria-hidden="true" />
-                    </div>
-                    <p className="ml-16 truncate text-sm font-medium text-gray-500">{item.name}</p>
-                </dt>
-                <dd className="ml-16 flex items-baseline">
-                    <p className="text-2xl font-semibold text-gray-900">{item.stat}</p>
-                    <p className={`ml-2 flex items-baseline text-sm font-semibold ${
-                        item.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                        {item.changeType === 'increase' ? 
-                            <ArrowUp className="h-5 w-5 flex-shrink-0 self-center text-green-500" /> : 
-                            <ArrowDown className="h-5 w-5 flex-shrink-0 self-center text-red-500" />}
-                        {item.change}
-                    </p>
-                </dd>
-              </div>
-            )
-           })}
-        </dl>
-      </div>
-      
-      {/* Main Grid: Top Courses Table */}
-      <div>
-        <h2 className="text-base font-semibold leading-6 text-gray-900">Top Performing Courses</h2>
-        <div className="mt-2 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Course</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Students</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rating</th>
-                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                    {topCourses.map(course => (
-                        <tr key={course.name} className="hover:bg-gray-50">
-                            <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm sm:w-auto sm:max-w-none sm:pl-6">
-                                <div className="flex items-center gap-4">
-                                    <img src={course.image} alt="" className="h-12 w-20 rounded-md object-cover"/>
-                                    <div>
-                                        <div className="font-medium text-gray-900">{course.name}</div>
+        fetchDashboardData();
+    }, []);
+
+    const statCardsData = [
+        { title: 'Total Revenue', value: `₹${stats?.totalRevenue || 0}`, icon: TrendingUp, color: { bg: 'bg-green-100', text: 'text-green-600' }, link: '#' },
+        { title: 'Active Courses', value: stats?.totalCourses ?? '0', icon: BookOpen, color: { bg: 'bg-blue-100', text: 'text-blue-600' }, link: '/company/courses' },
+        { title: 'Total Students', value: stats?.newStudentsCount ?? '0', icon: Users, color: { bg: 'bg-indigo-100', text: 'text-indigo-600' }, link: '/company/students' },
+        { title: 'Average Rating', value: stats?.averageRating.toFixed(2) ?? 'N/A', icon: Star, color: { bg: 'bg-yellow-100', text: 'text-yellow-600' }, link: '/company/reviews' },
+    ];
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center text-center h-96 bg-white rounded-xl border-2 border-dashed">
+                <AlertCircle className="w-16 h-16 text-red-400" />
+                <h2 className="mt-4 text-xl font-semibold text-gray-800">Failed to Load Dashboard</h2>
+                <p className="mt-1 text-gray-500">{error}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8">
+            <Toaster position="top-center" />
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900">Welcome Back, {user?.name || 'Company'} 👋</h1>
+                <p className="text-gray-500 mt-1">Here's a summary of your company's performance.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {loading ? (
+                    <>
+                        <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
+                    </>
+                ) : (
+                    statCardsData.map((item) => <StatCard key={item.title} {...item} />)
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Student Enrollment Chart */}
+                <div className="lg:col-span-2">
+                     {loading ? <ChartSkeleton /> : (
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-800">New Student Enrollment</h3>
+                            <p className="text-sm text-gray-500 mb-4">Last 6 months</p>
+                            <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                        <Tooltip cursor={{fill: 'rgba(239, 246, 255, 0.5)'}} contentStyle={{background: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb'}}/>
+                                        <Bar dataKey="students" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                     )}
+                </div>
+
+                {/* Recent Reviews */}
+                <div className="lg:col-span-1">
+                     {loading ? <ChartSkeleton /> : (
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-full">
+                            <h3 className="text-lg font-semibold text-gray-800">Recent Reviews</h3>
+                             <div className="mt-4 space-y-4">
+                                {stats?.recentReviews.length > 0 ? (
+                                    stats.recentReviews.map(review => (
+                                        <div key={review._id} className="flex items-start gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-600">
+                                                {review.student.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{review.student.name}</p>
+                                                <StarRating rating={review.rating} />
+                                                <p className="text-xs text-gray-500 mt-1">"{review.comment.substring(0, 50)}..."</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-10">
+                                        <MessageSquare className="mx-auto h-10 w-10 text-gray-400" />
+                                        <p className="mt-2 text-sm text-gray-500">No reviews yet.</p>
                                     </div>
-                                </div>
-                            </td>
-                            <td className="px-3 py-4 text-sm text-gray-500">{course.students}</td>
-                            <td className="px-3 py-4 text-sm text-gray-500">
-                                <span className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" /> {course.rating}
-                                </span>
-                            </td>
-                            <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                               <button className="text-gray-400 hover:text-gray-700"><MoreVertical size={20} /></button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                                )}
+                            </div>
+                        </div>
+                     )}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

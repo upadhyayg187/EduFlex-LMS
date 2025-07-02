@@ -7,13 +7,17 @@ import {
   getStudentProgress,
   submitAssignment,
   getNotifications,
-  updateProfile
+  updateProfile,
+  getDashboardData // --- IMPORT NEW FUNCTION ---
 } from '../controllers/studentController.js';
 
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
+// --- ADD NEW ROUTE FOR DASHBOARD ---
+router.get('/dashboard', protect, authorize('student'), getDashboardData);
+
 // Public route
-router.post('/signup', registerStudent);  // Use lowercase 'signup' for consistency
+router.post('/signup', registerStudent);
 
 // Protected Routes (only accessible by logged-in students)
 router.get('/:id/courses', protect, authorize('student'), getStudentCourses);

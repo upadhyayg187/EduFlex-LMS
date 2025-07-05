@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 
 const navItems = [
   { label: 'Dashboard', href: '/student/dashboard', icon: Home },
+  // --- FIX: Updated the href from /my-courses to /courses ---
   { label: 'My Courses', href: '/student/courses', icon: BookCopy },
   { label: 'My Progress', href: '/student/progress', icon: BarChart2 },
   { label: 'Assignments', href: '/student/assignments', icon: ClipboardCheck },
@@ -75,7 +76,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                     </li>
                     <li className="mt-auto">
                         <div className="-mx-2 space-y-1 pt-4 border-t border-gray-100">
-                            <Link href="#" onClick={() => setSidebarOpen(false)} className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
+                            <Link href="/student/settings" onClick={() => setSidebarOpen(false)} className="group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">
                                 <Settings className="h-6 w-6 shrink-0" /> Settings
                             </Link>
                             <button onClick={handleLogout} className="w-full group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50">

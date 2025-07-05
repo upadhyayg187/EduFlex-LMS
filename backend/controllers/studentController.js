@@ -2,179 +2,153 @@ import asyncHandler from 'express-async-handler';
 import Student from '../models/studentModel.js';
 import Course from '../models/courseModel.js';
 import Assignment from '../models/assignmentModel.js';
-import Submission from '../models/submissionModel.js'; // Import Submission model
+import Submission from '../models/submissionModel.js';
 import Notification from '../models/notificationModel.js';
-import generateToken from '../utils/generateToken.js';
+import Progress from '../models/progressModel.js';
+import { v2 as cloudinary } from 'cloudinary';
+import  generateToken  from '../utils/generateToken.js';
 
-// --- NEW FUNCTION for the Student Dashboard ---
-// @desc    Get data for the student dashboard
-// @route   GET /api/students/dashboard
-// @access  Private/Student
+// @desc    Get the logged-in student's profile
+export const getStudentProfile = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id).select('-password');
+    if (student) { res.json(student); } 
+    else { res.status(404); throw new Error('Student not found'); }
+});
+
+// @desc    Update student profile (name and avatar)
+export const updateProfile = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (!student) { res.status(404); throw new Error('Student not found'); }
+
+    student.name = req.body.name || student.name;
+    if (req.file) {
+        if (student.avatar && student.avatar.public_id) {
+            await cloudinary.uploader.destroy(student.avatar.public_id);
+        }
+        student.avatar = { url: req.file.path, public_id: req.file.filename };
+    }
+    const updatedStudent = await student.save();
+    res.json({
+        _id: updatedStudent._id, name: updatedStudent.name, email: updatedStudent.email,
+        avatar: updatedStudent.avatar, role: 'student', createdAt: updatedStudent.createdAt
+    });
+});
+
+// --- THIS IS THE NEW, MISSING FUNCTION ---
+// @desc    Remove student avatar
+// @route   DELETE /api/students/profile/avatar
+export const removeStudentAvatar = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (student) {
+        if (student.avatar && student.avatar.public_id) {
+            await cloudinary.uploader.destroy(student.avatar.public_id);
+            student.avatar = { url: '', public_id: '' };
+            const updatedStudent = await student.save();
+             res.json({
+                _id: updatedStudent._id, name: updatedStudent.name, email: updatedStudent.email,
+                avatar: updatedStudent.avatar, role: 'student', createdAt: updatedStudent.createdAt
+            });
+        } else {
+            res.status(400); throw new Error('No avatar to remove.');
+        }
+    } else {
+        res.status(404); throw new Error('Student not found');
+    }
+});
+
+// @desc    Update student password
+export const updateStudentPassword = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (!student) { res.status(404); throw new Error('Student not found'); }
+    const { currentPassword, newPassword } = req.body;
+    if (!(await student.matchPassword(currentPassword))) {
+        res.status(401); throw new Error('Invalid current password');
+    }
+    student.password = newPassword;
+    await student.save();
+    res.json({ message: 'Password updated successfully' });
+});
+
+
+// ... Other functions ...
 export const getDashboardData = asyncHandler(async (req, res) => {
     const studentId = req.user._id;
-
-    // 1. Get enrolled courses
-    const enrolledCourses = await Course.find({ students: studentId })
-        .sort({ updatedAt: -1 })
-        .limit(5)
-        .select('title thumbnail level');
-
-    // 2. Get total number of enrolled courses
+    const enrolledCourses = await Course.find({ students: studentId }).sort({ updatedAt: -1 }).limit(5).select('title thumbnail level');
     const enrolledCoursesCount = await Course.countDocuments({ students: studentId });
-
-    // 3. Get assignments for enrolled courses
     const courseIds = enrolledCourses.map(c => c._id);
     const assignments = await Assignment.find({ course: { $in: courseIds } });
     const assignmentIds = assignments.map(a => a._id);
-
-    // 4. Get submissions to check completion status
     const submissions = await Submission.find({ student: studentId, assignment: { $in: assignmentIds } });
     const submittedAssignmentIds = submissions.map(s => s.assignment.toString());
-
     const assignmentsCompletedCount = submittedAssignmentIds.length;
     const assignmentsPendingCount = assignments.length - assignmentsCompletedCount;
-
-    res.json({
-        enrolledCoursesCount,
-        assignmentsCompletedCount,
-        assignmentsPendingCount,
-        recentCourses: enrolledCourses
-    });
+    res.json({ enrolledCoursesCount, assignmentsCompletedCount, assignmentsPendingCount, recentCourses: enrolledCourses });
 });
-
-
-// @desc    Register a new student
-// @route   POST /api/students/signup
-// @access  Public
-const registerStudent = asyncHandler(async (req, res) => {
+export const getEnrolledCourses = asyncHandler(async (req, res) => {
+    const studentId = req.user._id;
+    const courses = await Course.find({ students: studentId }).populate('createdBy', 'name').select('title thumbnail level createdBy');
+    res.json(courses);
+});
+export const saveCourseProgress = asyncHandler(async (req, res) => {
+    const { courseId, lessonId, isCompleted, timestamp } = req.body;
+    const studentId = req.user._id;
+    if (!courseId || !lessonId) { res.status(400); throw new Error('Course ID and Lesson ID are required.'); }
+    let progress = await Progress.findOne({ student: studentId, course: courseId });
+    if (!progress) {
+        progress = new Progress({ student: studentId, course: courseId, lessonProgress: [] });
+    }
+    const lessonIndex = progress.lessonProgress.findIndex((lp) => lp.lessonId.toString() === lessonId);
+    if (lessonIndex > -1) {
+        if (timestamp !== undefined) { progress.lessonProgress[lessonIndex].lastTimestamp = timestamp; }
+        if (isCompleted === true) { progress.lessonProgress[lessonIndex].isCompleted = true; }
+    } else {
+        progress.lessonProgress.push({ lessonId, isCompleted: !!isCompleted, lastTimestamp: timestamp || 0 });
+    }
+    progress.markModified('lessonProgress');
+    const updatedProgress = await progress.save();
+    res.status(200).json(updatedProgress);
+});
+export const getMyProgressOverview = asyncHandler(async (req, res) => {
+    const studentId = req.user._id;
+    const enrolledCourses = await Course.find({ students: studentId }).populate('createdBy', 'name').select('title thumbnail curriculum createdBy').lean();
+    const progressData = await Progress.find({ student: studentId });
+    const progressMap = new Map(progressData.map(p => [p.course.toString(), p.lessonProgress]));
+    const coursesWithProgress = enrolledCourses.map(course => {
+        const lessonProgress = progressMap.get(course._id.toString()) || [];
+        const totalLessons = course.curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
+        const completedCount = lessonProgress.filter(lp => lp.isCompleted).length;
+        const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+        return { _id: course._id, title: course.title, thumbnail: course.thumbnail, progress: progressPercentage, instructor: course.createdBy.name };
+    });
+    res.json(coursesWithProgress);
+});
+export const getStudentAssignments = asyncHandler(async (req, res) => {
+    const studentId = req.user._id;
+    const enrolledCourses = await Course.find({ students: studentId }).select('_id');
+    const courseIds = enrolledCourses.map(c => c._id);
+    if (courseIds.length === 0) { return res.json([]); }
+    const assignments = await Assignment.find({ course: { $in: courseIds } }).populate('course', 'title').sort({ dueDate: 1 }).lean();
+    const submissions = await Submission.find({ student: studentId }).lean();
+    const submissionMap = new Map(submissions.map(s => [s.assignment.toString(), s]));
+    const assignmentsWithStatus = assignments.map(assignment => {
+        const submission = submissionMap.get(assignment._id.toString());
+        return { ...assignment, status: submission ? submission.status : 'To Do', submission: submission || null };
+    });
+    res.json(assignmentsWithStatus);
+});
+export const registerStudent = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
-
   const studentExists = await Student.findOne({ email });
-  if (studentExists) {
-    return res.status(400).json({ message: 'Student already exists' });
-  }
-
+  if (studentExists) { res.status(400); throw new Error('Student already exists'); }
   const student = await Student.create({ name, email, password });
-
   if (student) {
     generateToken(res, student._id, 'student');
-    res.status(201).json({
-      _id: student._id,
-      name: student.name,
-      email: student.email,
-      role: 'student',
-    });
+    res.status(201).json({ _id: student._id, name: student.name, email: student.email, role: 'student', createdAt: student.createdAt });
   } else {
-    res.status(400).json({ message: 'Invalid student data' });
+    res.status(400); throw new Error('Invalid student data');
   }
 });
-
-// @desc    Get enrolled courses
-// @route   GET /api/students/:id/courses
-// @access  Private
-const getStudentCourses = asyncHandler(async (req, res) => {
-  const studentId = req.params.id;
-
-  if (req.user._id.toString() !== studentId && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized for this student' });
-  }
-
-  const courses = await Course.find({ students: studentId }).populate('createdBy', 'name');
-  res.json(courses);
-});
-
-// @desc    Get course progress (dummy structure)
-// @route   GET /api/students/:id/progress
-// @access  Private
-const getStudentProgress = asyncHandler(async (req, res) => {
-  const studentId = req.params.id;
-
-  if (req.user._id.toString() !== studentId && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized for this student' });
-  }
-
-  const dummyProgress = [
-    { courseId: '123', progress: 70 },
-    { courseId: '456', progress: 45 },
-  ];
-
-  res.json(dummyProgress);
-});
-
-// @desc    Submit an assignment
-// @route   POST /api/students/:id/assignments
-// @access  Private
-const submitAssignment = asyncHandler(async (req, res) => {
-  const studentId = req.params.id;
-  const { courseId, content, fileUrl } = req.body;
-
-  if (req.user._id.toString() !== studentId && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized for this student' });
-  }
-
-  const course = await Course.findById(courseId);
-  if (!course || !course.students.includes(studentId)) {
-    return res.status(400).json({ message: 'Student is not enrolled in this course' });
-  }
-
-  const assignment = await Assignment.create({
-    student: studentId,
-    course: courseId,
-    content,
-    fileUrl,
-  });
-
-  res.status(201).json({ message: 'Assignment submitted successfully', assignment });
-});
-
-// @desc    Get student notifications
-// @route   GET /api/students/:id/notifications
-// @access  Private
-const getNotifications = asyncHandler(async (req, res) => {
-  const studentId = req.params.id;
-
-  if (req.user._id.toString() !== studentId && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized for this student' });
-  }
-
-  const notifications = await Notification.find({ recipient: studentId }).sort({ createdAt: -1 });
+export const getNotifications = asyncHandler(async (req, res) => {
+  const notifications = await Notification.find({ recipient: req.user._id }).sort({ createdAt: -1 });
   res.json(notifications);
 });
-
-// @desc    Update student profile
-// @route   PUT /api/students/:id/profile
-// @access  Private
-const updateProfile = asyncHandler(async (req, res) => {
-  const student = await Student.findById(req.params.id);
-
-  if (!student) {
-    return res.status(404).json({ message: 'Student not found' });
-  }
-
-  if (req.user._id.toString() !== student._id.toString() && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized for this student' });
-  }
-
-  student.name = req.body.name || student.name;
-  student.email = req.body.email || student.email;
-
-  if (req.body.password) {
-    student.password = req.body.password;
-  }
-
-  const updatedStudent = await student.save();
-  res.json({
-    _id: updatedStudent._id,
-    name: updatedStudent.name,
-    email: updatedStudent.email,
-  });
-});
-
-export {
-  registerStudent,
-  getStudentCourses,
-  getStudentProgress,
-  submitAssignment,
-  getNotifications,
-  updateProfile,
-};

@@ -6,16 +6,28 @@ import {
     getCourseByIdForOwner,
     updateCourse,
     getPublicCourseById,
-    getPublicCourses
+    getPublicCourses,
+    searchCourses,
+    enrollInCourse,
+    getEnrolledCourseForStudent // --- IMPORT NEW FUNCTION ---
 } from '../controllers/courseController.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
+// --- STUDENT-PROTECTED COURSE VIEW ROUTE ---
+router.route('/student/:id').get(protect, authorize('student'), getEnrolledCourseForStudent);
+
+
 // --- PUBLIC ROUTES ---
+router.route('/search').get(searchCourses);
 router.route('/public').get(getPublicCourses);
 router.route('/public/:id').get(getPublicCourseById);
+
+// --- ENROLLMENT ROUTE ---
+router.route('/:id/enroll').post(protect, authorize('student'), enrollInCourse);
+
 
 // --- COMPANY-PROTECTED ROUTES ---
 router.route('/')

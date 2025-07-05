@@ -4,8 +4,16 @@ import bcrypt from 'bcryptjs';
 const studentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
   password: { type: String, required: true },
+  enrolledCourses: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Course' 
+  }],
+  // --- NEW FIELD ---
+  avatar: {
+    url: { type: String, default: '' },
+    public_id: { type: String, default: '' },
+  },
 }, { timestamps: true });
 
 // Hash password before saving

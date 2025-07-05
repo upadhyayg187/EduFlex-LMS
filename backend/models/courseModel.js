@@ -29,12 +29,16 @@ const courseSchema = mongoose.Schema({
       required: true,
       ref: 'Company',
     },
-    // --- FIX: Added the missing students array ---
+    // --- THIS IS THE FIX ---
+    // Added the missing field to track enrolled students
     students: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Student'
     }]
 }, { timestamps: true });
+
+// Add a text index for searching
+courseSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 const Course = mongoose.model('Course', courseSchema);
 

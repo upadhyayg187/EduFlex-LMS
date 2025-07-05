@@ -102,7 +102,7 @@ export default function StudentDashboard() {
                     ) : (
                         stats?.recentCourses.length > 0 ? (
                             stats.recentCourses.map(course => (
-                                <Link href={`/student/courses/${course._id}`} key={course._id} className="group flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:border-blue-500 transition-all">
+                                <Link href={`/student/courses/view/${course._id}`} key={course._id} className="group flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:border-blue-500 transition-all">
                                     <img src={course.thumbnail?.url || 'https://placehold.co/128x72/e0e7ff/3730a3?text=Course'} alt={course.title} className="h-16 w-28 rounded-md bg-gray-100 object-cover" />
                                     <div className="flex-grow">
                                         <p className="font-semibold text-gray-800">{course.title}</p>
@@ -117,7 +117,7 @@ export default function StudentDashboard() {
                         ) : (
                             <div className="text-center py-10 bg-white rounded-xl border-2 border-dashed">
                                 <h3 className="text-lg font-medium text-gray-900">No Courses Enrolled</h3>
-                                <p className="mt-1 text-sm text-gray-500">Start your learning journey by browsing our courses.</p>
+                                <p className="mt-1 text-sm text-gray-500">Start your learning journey by Browse our courses.</p>
                                 <Link href="/search" className="mt-4 inline-block bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg shadow-sm hover:bg-blue-700">
                                     Browse Courses
                                 </Link>

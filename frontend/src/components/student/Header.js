@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/context/UserContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Bell, Menu } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function Header({ onMobileMenuToggle }) {
@@ -46,9 +46,13 @@ export default function Header({ onMobileMenuToggle }) {
                     
                     <div className="relative" ref={profileRef}>
                         <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 -m-1.5 p-1.5">
-                            <div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold">
-                                {getInitials(user?.name)}
-                            </div>
+                             {user?.avatar?.url ? (
+                                <img className="h-8 w-8 rounded-full bg-gray-50 object-cover" src={user.avatar.url} alt="Profile" />
+                            ) : (
+                                <div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold">
+                                    {getInitials(user?.name)}
+                                </div>
+                            )}
                             <span className="hidden lg:flex lg:items-center">
                                 <span className="text-sm font-semibold leading-6 text-gray-900" aria-hidden="true">
                                     {user?.name || 'Student'}
@@ -63,7 +67,7 @@ export default function Header({ onMobileMenuToggle }) {
                                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                                 </div>
                                 <div className="py-1">
-                                    <Link href="#" onClick={() => setIsProfileOpen(false)} className="block px-3 py-2 text-sm leading-6 text-gray-700 hover:bg-gray-50">My Profile</Link>
+                                    <Link href="/student/profile" onClick={() => setIsProfileOpen(false)} className="block px-3 py-2 text-sm leading-6 text-gray-700 hover:bg-gray-50">My Profile</Link>
                                     <button onClick={handleLogout} className="w-full text-left block px-3 py-2 text-sm leading-6 text-gray-700 hover:bg-gray-50 border-t mt-1 pt-2">Sign out</button>
                                 </div>
                             </div>

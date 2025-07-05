@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import config from './config/config.js'; // Import our new config
+import config from './config/config.js';
 import connectDB from './config/db.js';
 
 // Import Routes
@@ -14,6 +14,8 @@ import assignmentRoutes from './routes/assignmentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
 import aiSupportRoutes from './routes/aiSupportRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import submissionRoutes from './routes/submissionRoutes.js'; // --- ADD THIS LINE ---
 
 connectDB();
 const app = express();
@@ -38,8 +40,10 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/ai-support', aiSupportRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/submissions', submissionRoutes); // --- ADD THIS LINE ---
 
 app.get('/', (req, res) => res.send('API is running successfully...'));
 
-const PORT = config.port; // Use port from config
+const PORT = config.port;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

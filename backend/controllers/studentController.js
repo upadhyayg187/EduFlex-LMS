@@ -8,69 +8,44 @@ import Progress from '../models/progressModel.js';
 import { v2 as cloudinary } from 'cloudinary';
 import  generateToken  from '../utils/generateToken.js';
 
-// @desc    Get the logged-in student's profile
-export const getStudentProfile = asyncHandler(async (req, res) => {
-    const student = await Student.findById(req.user._id).select('-password');
-    if (student) { res.json(student); } 
-    else { res.status(404); throw new Error('Student not found'); }
-});
+// --- THIS FUNCTION IS NOW UPDATED ---
+// @desc    Get all courses a student is enrolled in, including progress
+// @route   GET /api/students/my-courses
+export const getEnrolledCourses = asyncHandler(async (req, res) => {
+    const studentId = req.user._id;
 
-// @desc    Update student profile (name and avatar)
-export const updateProfile = asyncHandler(async (req, res) => {
-    const student = await Student.findById(req.user._id);
-    if (!student) { res.status(404); throw new Error('Student not found'); }
+    const enrolledCourses = await Course.find({ students: studentId })
+        .populate('createdBy', 'name')
+        .select('title thumbnail level createdBy curriculum')
+        .lean();
 
-    student.name = req.body.name || student.name;
-    if (req.file) {
-        if (student.avatar && student.avatar.public_id) {
-            await cloudinary.uploader.destroy(student.avatar.public_id);
-        }
-        student.avatar = { url: req.file.path, public_id: req.file.filename };
-    }
-    const updatedStudent = await student.save();
-    res.json({
-        _id: updatedStudent._id, name: updatedStudent.name, email: updatedStudent.email,
-        avatar: updatedStudent.avatar, role: 'student', createdAt: updatedStudent.createdAt
+    // Fetch all progress data for the student in one go for efficiency
+    const progressData = await Progress.find({ student: studentId });
+    const progressMap = new Map(progressData.map(p => [p.course.toString(), p.lessonProgress]));
+
+    // Combine course data with calculated progress
+    const coursesWithProgress = enrolledCourses.map(course => {
+        const lessonProgress = progressMap.get(course._id.toString()) || [];
+        const totalLessons = course.curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
+        const completedCount = lessonProgress.filter(lp => lp.isCompleted).length;
+        const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+        
+        return {
+            _id: course._id,
+            title: course.title,
+            thumbnail: course.thumbnail,
+            level: course.level,
+            createdBy: course.createdBy,
+            progress: progressPercentage,
+        };
     });
-});
 
-// --- THIS IS THE NEW, MISSING FUNCTION ---
-// @desc    Remove student avatar
-// @route   DELETE /api/students/profile/avatar
-export const removeStudentAvatar = asyncHandler(async (req, res) => {
-    const student = await Student.findById(req.user._id);
-    if (student) {
-        if (student.avatar && student.avatar.public_id) {
-            await cloudinary.uploader.destroy(student.avatar.public_id);
-            student.avatar = { url: '', public_id: '' };
-            const updatedStudent = await student.save();
-             res.json({
-                _id: updatedStudent._id, name: updatedStudent.name, email: updatedStudent.email,
-                avatar: updatedStudent.avatar, role: 'student', createdAt: updatedStudent.createdAt
-            });
-        } else {
-            res.status(400); throw new Error('No avatar to remove.');
-        }
-    } else {
-        res.status(404); throw new Error('Student not found');
-    }
-});
-
-// @desc    Update student password
-export const updateStudentPassword = asyncHandler(async (req, res) => {
-    const student = await Student.findById(req.user._id);
-    if (!student) { res.status(404); throw new Error('Student not found'); }
-    const { currentPassword, newPassword } = req.body;
-    if (!(await student.matchPassword(currentPassword))) {
-        res.status(401); throw new Error('Invalid current password');
-    }
-    student.password = newPassword;
-    await student.save();
-    res.json({ message: 'Password updated successfully' });
+    res.json(coursesWithProgress);
 });
 
 
-// ... Other functions ...
+// --- Other functions ---
+
 export const getDashboardData = asyncHandler(async (req, res) => {
     const studentId = req.user._id;
     const enrolledCourses = await Course.find({ students: studentId }).sort({ updatedAt: -1 }).limit(5).select('title thumbnail level');
@@ -82,13 +57,14 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     const submittedAssignmentIds = submissions.map(s => s.assignment.toString());
     const assignmentsCompletedCount = submittedAssignmentIds.length;
     const assignmentsPendingCount = assignments.length - assignmentsCompletedCount;
-    res.json({ enrolledCoursesCount, assignmentsCompletedCount, assignmentsPendingCount, recentCourses: enrolledCourses });
+    res.json({
+        enrolledCoursesCount,
+        assignmentsCompletedCount,
+        assignmentsPendingCount,
+        recentCourses: enrolledCourses
+    });
 });
-export const getEnrolledCourses = asyncHandler(async (req, res) => {
-    const studentId = req.user._id;
-    const courses = await Course.find({ students: studentId }).populate('createdBy', 'name').select('title thumbnail level createdBy');
-    res.json(courses);
-});
+
 export const saveCourseProgress = asyncHandler(async (req, res) => {
     const { courseId, lessonId, isCompleted, timestamp } = req.body;
     const studentId = req.user._id;
@@ -108,6 +84,7 @@ export const saveCourseProgress = asyncHandler(async (req, res) => {
     const updatedProgress = await progress.save();
     res.status(200).json(updatedProgress);
 });
+
 export const getMyProgressOverview = asyncHandler(async (req, res) => {
     const studentId = req.user._id;
     const enrolledCourses = await Course.find({ students: studentId }).populate('createdBy', 'name').select('title thumbnail curriculum createdBy').lean();
@@ -118,10 +95,17 @@ export const getMyProgressOverview = asyncHandler(async (req, res) => {
         const totalLessons = course.curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
         const completedCount = lessonProgress.filter(lp => lp.isCompleted).length;
         const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-        return { _id: course._id, title: course.title, thumbnail: course.thumbnail, progress: progressPercentage, instructor: course.createdBy.name };
+        return {
+            _id: course._id,
+            title: course.title,
+            thumbnail: course.thumbnail,
+            progress: progressPercentage,
+            instructor: course.createdBy.name,
+        };
     });
     res.json(coursesWithProgress);
 });
+
 export const getStudentAssignments = asyncHandler(async (req, res) => {
     const studentId = req.user._id;
     const enrolledCourses = await Course.find({ students: studentId }).select('_id');
@@ -132,10 +116,15 @@ export const getStudentAssignments = asyncHandler(async (req, res) => {
     const submissionMap = new Map(submissions.map(s => [s.assignment.toString(), s]));
     const assignmentsWithStatus = assignments.map(assignment => {
         const submission = submissionMap.get(assignment._id.toString());
-        return { ...assignment, status: submission ? submission.status : 'To Do', submission: submission || null };
+        return {
+            ...assignment,
+            status: submission ? submission.status : 'To Do',
+            submission: submission || null,
+        };
     });
     res.json(assignmentsWithStatus);
 });
+
 export const registerStudent = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
   const studentExists = await Student.findOne({ email });
@@ -148,6 +137,85 @@ export const registerStudent = asyncHandler(async (req, res) => {
     res.status(400); throw new Error('Invalid student data');
   }
 });
+
+export const getStudentProfile = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id).select('-password');
+    if (student) {
+        res.json(student);
+    } else {
+        res.status(404);
+        throw new Error('Student not found');
+    }
+});
+
+export const updateProfile = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (!student) {
+        res.status(404);
+        throw new Error('Student not found');
+    }
+    student.name = req.body.name || student.name;
+    if (req.file) {
+        if (student.avatar && student.avatar.public_id) {
+            await cloudinary.uploader.destroy(student.avatar.public_id);
+        }
+        student.avatar = {
+            url: req.file.path,
+            public_id: req.file.filename,
+        };
+    }
+    const updatedStudent = await student.save();
+    res.json({
+        _id: updatedStudent._id,
+        name: updatedStudent.name,
+        email: updatedStudent.email,
+        avatar: updatedStudent.avatar,
+        role: 'student',
+        createdAt: updatedStudent.createdAt
+    });
+});
+
+export const updateStudentPassword = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (!student) {
+        res.status(404);
+        throw new Error('Student not found');
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!(await student.matchPassword(currentPassword))) {
+        res.status(401);
+        throw new Error('Invalid current password');
+    }
+    student.password = newPassword;
+    await student.save();
+    res.json({ message: 'Password updated successfully' });
+});
+
+export const removeStudentAvatar = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.user._id);
+    if (student) {
+        if (student.avatar && student.avatar.public_id) {
+            await cloudinary.uploader.destroy(student.avatar.public_id);
+            student.avatar = { url: '', public_id: '' };
+            const updatedStudent = await student.save();
+             res.json({
+                _id: updatedStudent._id,
+                name: updatedStudent.name,
+                email: updatedStudent.email,
+                avatar: updatedStudent.avatar,
+                role: 'student',
+                createdAt: updatedStudent.createdAt
+            });
+        } else {
+            res.status(400);
+            throw new Error('No avatar to remove.');
+        }
+    } else {
+        res.status(404);
+        throw new Error('Student not found');
+    }
+});
+
 export const getNotifications = asyncHandler(async (req, res) => {
   const notifications = await Notification.find({ recipient: req.user._id }).sort({ createdAt: -1 });
   res.json(notifications);

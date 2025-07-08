@@ -22,6 +22,12 @@ const companySchema = new mongoose.Schema({
   industry: {
     type: String,
   },
+  // --- NEW FIELD ---
+  status: {
+    type: String,
+    enum: ['Pending', 'Active', 'Suspended'],
+    default: 'Pending', // New companies will require approval
+  },
 }, { timestamps: true });
 
 // Hash the password before saving

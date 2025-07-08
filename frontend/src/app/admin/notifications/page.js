@@ -3,18 +3,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '@/helpers/axiosInstance';
 import { toast, Toaster } from 'react-hot-toast';
-import { Bell, UserPlus, Star, FileText, CheckCheck, Mail } from 'lucide-react';
+import { Bell, UserPlus, Star, FileText, CheckCheck, Mail, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 
-// Helper to format dates into groups like "Today", "Yesterday", etc.
+// Helper to format dates into groups
 const groupNotificationsByDate = (notifications) => {
-    const groups = {
-        Today: [],
-        Yesterday: [],
-        'This Week': [],
-        'Older': [],
-    };
-
+    const groups = { Today: [], Yesterday: [], 'This Week': [], 'Older': [] };
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -33,16 +27,14 @@ const groupNotificationsByDate = (notifications) => {
             groups.Older.push(notif);
         }
     });
-
     return groups;
 };
 
 // Map notification types to icons and colors
 const notificationIcons = {
-    new_student: { icon: UserPlus, color: 'bg-blue-500' },
-    new_review: { icon: Star, color: 'bg-yellow-500' },
-    assignment_submission: { icon: FileText, color: 'bg-green-500' },
-    system: { icon: Bell, color: 'bg-gray-500' },
+    new_company: { icon: UserPlus, color: 'bg-blue-500' },
+    new_student: { icon: UserPlus, color: 'bg-indigo-500' },
+    course_published: { icon: BookOpen, color: 'bg-green-500' },
     default: { icon: Bell, color: 'bg-gray-500' },
 };
 
@@ -50,17 +42,19 @@ export default function NotificationsPage() {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const fetchNotifications = async () => {
+        setLoading(true);
+        try {
+            const { data } = await axiosInstance.get('/notifications');
+            setNotifications(data);
+        } catch (error) {
+            toast.error('Could not fetch notifications.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const { data } = await axiosInstance.get('/notifications');
-                setNotifications(data);
-            } catch (error) {
-                toast.error('Could not fetch notifications.');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchNotifications();
     }, []);
 
@@ -84,22 +78,19 @@ export default function NotificationsPage() {
     return (
         <div className="space-y-8">
             <Toaster position="top-center" />
-
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-                    <p className="text-sm text-gray-500 mt-1">Review important updates, alerts, and announcements.</p>
+                    <p className="text-sm text-gray-500 mt-1">Platform-wide events and alerts.</p>
                 </div>
                 <button 
                     onClick={markAllAsRead}
                     disabled={!notifications.some(n => !n.read)}
                     className="flex items-center gap-2 bg-white text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <CheckCheck size={18} />
-                    Mark all as read
+                    <CheckCheck size={18} /> Mark all as read
                 </button>
             </div>
-
             {notifications.length > 0 ? (
                 <div className="space-y-6">
                     {Object.entries(groupedNotifications).map(([group, notifs]) => (

@@ -4,20 +4,15 @@ import {
     markNotificationAsRead, 
     markAllNotificationsAsRead 
 } from '../controllers/notificationController.js';
-import { protect, authorize } from '../middlewares/authMiddleware.js';
+import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Routes are protected and authorized for 'company' role
-router.use(protect, authorize('company'));
+// Routes are protected for ANY logged-in user
+router.use(protect);
 
-router.route('/')
-    .get(getNotifications);
-
-router.route('/read-all')
-    .patch(markAllNotificationsAsRead);
-
-router.route('/:id/read')
-    .patch(markNotificationAsRead);
+router.route('/').get(getNotifications);
+router.route('/read-all').patch(markAllNotificationsAsRead);
+router.route('/:id/read').patch(markNotificationAsRead);
 
 export default router;

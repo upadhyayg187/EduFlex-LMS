@@ -1,6 +1,3 @@
-
-
-
 'use client';
 
 import { useState } from 'react';
@@ -10,9 +7,9 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import toast, { Toaster } from 'react-hot-toast';
 import axiosInstance from '@/helpers/axiosInstance';
-import Input from '@/components/ui/Input'; // Import Input
-import Button from '@/components/ui/Button'; // Import Button
-import { IconUser, IconMail, IconLock } from '@tabler/icons-react';
+import Input from '@/components/ui/Input'; 
+import Button from '@/components/ui/Button'; 
+import { User, Building, Mail, Lock } from 'lucide-react';
 
 export default function SignupPage() {
   const [role, setRole] = useState('student');
@@ -26,14 +23,15 @@ export default function SignupPage() {
       password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
     }),
     onSubmit: async (values, { setSubmitting, resetForm }) => {
-      const endpoint = role === 'student' ? '/students/signup' : '/companies/signup';
       const loadingToast = toast.loading('Creating account...');
       try {
-        await axiosInstance.post(endpoint, values);
+        // --- FIX: Use the single, centralized signup endpoint for both roles ---
+        await axiosInstance.post('/auth/signup', { ...values, role });
+        
         toast.dismiss(loadingToast);
         toast.success('Signup successful! Please login.');
         resetForm();
-        router.push('/login');
+        router.push(`/login?role=${role}`);
       } catch (error) {
         toast.dismiss(loadingToast);
         toast.error(error.response?.data?.message || 'Signup failed');
@@ -54,16 +52,16 @@ export default function SignupPage() {
 
         <div className="flex justify-center mb-6 rounded-lg p-1 bg-gray-100">
           <button
-            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 ${role === 'student' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
+            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center gap-2 ${role === 'student' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
             onClick={() => setRole('student')}
           >
-            I am a Student
+            <User size={16} /> I am a Student
           </button>
           <button
-            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 ${role === 'company' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
+            className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center gap-2 ${role === 'company' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600'}`}
             onClick={() => setRole('company')}
           >
-            I am a Company
+            <Building size={16} /> I am a Company
           </button>
         </div>
 
@@ -72,7 +70,7 @@ export default function SignupPage() {
               id="name"
               name="name"
               placeholder="Full Name"
-              icon={IconUser}
+              icon={User}
               value={formik.values.name}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -83,7 +81,7 @@ export default function SignupPage() {
               name="email"
               type="email"
               placeholder="Email Address"
-              icon={IconMail}
+              icon={Mail}
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -94,7 +92,7 @@ export default function SignupPage() {
               name="password"
               type="password"
               placeholder="Password"
-              icon={IconLock}
+              icon={Lock}
               value={formik.values.password}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -115,7 +113,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-
-
-

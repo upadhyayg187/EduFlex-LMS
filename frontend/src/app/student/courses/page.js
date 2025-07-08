@@ -19,10 +19,11 @@ const CourseCard = ({ course }) => (
              <p className="text-sm font-semibold text-blue-600">{course.level}</p>
              <h3 className="mt-2 font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{course.title}</h3>
              <p className="mt-1 text-xs text-gray-500">by {course.createdBy?.name || 'EduFlex'}</p>
+             {/* --- FIX: Use the real course.progress data --- */}
              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '25%' }}></div> {/* Placeholder progress */}
+                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${course.progress}%` }}></div>
              </div>
-             <p className="text-right text-xs text-gray-500 mt-1">25% complete</p>
+             <p className="text-right text-xs text-gray-500 mt-1">{course.progress}% complete</p>
         </div>
     </Link>
 );

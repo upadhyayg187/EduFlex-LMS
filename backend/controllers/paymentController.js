@@ -5,7 +5,9 @@ import config from '../config/config.js';
 import Course from '../models/courseModel.js';
 import Student from '../models/studentModel.js';
 import Payment from '../models/paymentModel.js';
-import mongoose from 'mongoose'; // Import Mongoose
+import Notification from '../models/notificationModel.js';
+import Admin from '../models/adminModel.js'; // Import Admin model
+import mongoose from 'mongoose';
 
 const instance = new Razorpay({
     key_id: config.razorpayKeyId,
@@ -26,38 +28,56 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (isAuthentic) {
-        // --- FIX: Use a transaction for data consistency ---
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
             const course = await Course.findById(courseId).session(session);
-            if (!course) throw new Error('Course not found');
+            const student = await Student.findById(studentId).session(session);
+            
+            if (!course || !student) throw new Error('Course or Student not found');
 
-            await Course.updateOne(
-                { _id: courseId },
-                { $addToSet: { students: studentId } },
-                { session }
-            );
-            await Student.updateOne(
-                { _id: studentId },
-                { $addToSet: { enrolledCourses: courseId } },
-                { session }
-            );
+            await Course.updateOne({ _id: courseId }, { $addToSet: { students: studentId } }, { session });
+            await Student.updateOne({ _id: studentId }, { $addToSet: { enrolledCourses: courseId } }, { session });
             
             await Payment.create([{
-                razorpay_order_id,
-                razorpay_payment_id,
-                razorpay_signature,
-                student: studentId,
-                course: courseId,
-                amount: course.price,
+                razorpay_order_id, razorpay_payment_id, razorpay_signature,
+                student: studentId, course: courseId, amount: course.price,
             }], { session });
+
+            // --- FIX: Create notifications for both company and admin ---
+            const admins = await Admin.find({}).select('_id').session(session);
+            const notifications = [];
+            
+            // Notification for the Company
+            notifications.push({
+                recipient: course.createdBy,
+                recipientModel: 'Company',
+                message: `New student '${student.name}' has enrolled in your course: "${course.title}"`,
+                link: `/company/students/${student._id}`,
+                type: 'new_student'
+            });
+
+            // Notifications for all Admins
+            if (admins.length > 0) {
+                admins.forEach(admin => {
+                    notifications.push({
+                        recipient: admin._id,
+                        recipientModel: 'Admin',
+                        message: `New student '${student.name}' has enrolled in course "${course.title}"`,
+                        link: `/admin/students`,
+                        type: 'new_student'
+                    });
+                });
+            }
+
+            await Notification.create(notifications, { session });
 
             await session.commitTransaction();
             res.status(200).json({ success: true, message: "Enrollment successful!" });
 
         } catch (error) {
             await session.abortTransaction();
+            console.error("Enrollment Transaction Error:", error);
             throw new Error('Enrollment process failed. Please try again.');
         } finally {
             session.endSession();

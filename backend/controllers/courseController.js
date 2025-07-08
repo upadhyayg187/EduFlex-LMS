@@ -4,8 +4,11 @@ import Razorpay from 'razorpay';
 import config from '../config/config.js';
 import Course from '../models/courseModel.js';
 import Student from '../models/studentModel.js';
+import Company from '../models/companyModel.js';
 import Feedback from '../models/feedbackModel.js';
 import Progress from '../models/progressModel.js';
+import Notification from '../models/notificationModel.js';
+import Admin from '../models/adminModel.js'; // Import Admin model
 import { v2 as cloudinary } from 'cloudinary';
 
 const instance = new Razorpay({
@@ -13,141 +16,28 @@ const instance = new Razorpay({
     key_secret: config.razorpayKeySecret,
 });
 
-// --- THIS FUNCTION IS NOW UPDATED WITH TRANSACTION LOGIC ---
-export const enrollInCourse = asyncHandler(async (req, res) => {
-    const courseId = req.params.id;
-    const studentId = req.user._id;
-
-    const course = await Course.findById(courseId);
-    if (!course) {
-        res.status(404);
-        throw new Error('Course not found.');
-    }
-    
-    if (course.students.map(id => id.toString()).includes(studentId.toString())) {
-        res.status(400);
-        throw new Error('You are already enrolled in this course.');
-    }
-
-    if (course.price === 0) {
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        try {
-            await Course.updateOne({ _id: courseId }, { $addToSet: { students: studentId } }, { session });
-            await Student.updateOne({ _id: studentId }, { $addToSet: { enrolledCourses: courseId } }, { session });
-            await session.commitTransaction();
-            res.status(200).json({ success: true, message: 'Successfully enrolled in free course.' });
-        } catch (error) {
-            await session.abortTransaction();
-            throw new Error('Free enrollment failed. Please try again.');
-        } finally {
-            session.endSession();
-        }
-        return;
-    }
-    
-    const options = {
-        amount: Number(course.price * 100),
-        currency: "INR",
-        receipt: `rcpt_${Date.now()}`,
-    };
-
-    if (options.amount < 100) {
-        throw new Error('Course price must be at least ₹1 to process payment.');
-    }
-
-    try {
-        const order = await instance.orders.create(options);
-        if (!order) {
-            res.status(500);
-            throw new Error('Could not create payment order.');
-        }
-        res.status(200).json({ success: true, order });
-    } catch (error) {
-        console.error('[Enrollment] FAILED: Razorpay API Error:', error);
-        throw new Error('Payment gateway error. Please try again later.');
-    }
-});
-
-
-// ... The rest of your courseController.js file remains the same ...
-// It does not need to be changed, so it is omitted here for brevity.
-const courseWithRatingsPipeline = () => [
-    { $lookup: { from: 'feedbacks', localField: '_id', foreignField: 'course', as: 'reviews' } },
-    { $addFields: { averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] }, reviewCount: { $size: '$reviews' } } },
-    { $lookup: { from: 'companies', localField: 'createdBy', foreignField: '_id', as: 'creatorInfo' } },
-    { $unwind: { path: '$creatorInfo', preserveNullAndEmptyArrays: true } },
-    { $project: {
-        title: 1, description: 1, level: 1, tags: 1, price: 1, offerCertificate: 1, status: 1, thumbnail: 1,
-        curriculum: 1, students: 1, createdAt: 1, averageRating: 1, reviewCount: 1,
-        'createdBy.name': '$creatorInfo.name', 'createdBy._id': '$creatorInfo._id',
-    }}
-];
-export const getEnrolledCourseForStudent = asyncHandler(async (req, res) => {
-    const course = await Course.findById(req.params.id).populate('createdBy', 'name industry').lean();
-    if (!course) { res.status(404); throw new Error('Course not found'); }
-    const studentIdsAsStrings = course.students.map(id => id.toString());
-    const isEnrolled = studentIdsAsStrings.includes(req.user._id.toString());
-    if (!isEnrolled) { res.status(403); throw new Error('You are not authorized to view this course.'); }
-    const progress = await Progress.findOne({ student: req.user._id, course: course._id }).lean();
-    res.status(200).json({ ...course, progress: progress ? progress.lessonProgress : [] });
-});
-export const searchCourses = asyncHandler(async (req, res) => {
-    const searchTerm = req.query.q || '';
-    if (!searchTerm) { return getPublicCourses(req, res); }
-    const pipeline = [
-        { $match: { $text: { $search: searchTerm }, status: 'Published' } },
-        { $addFields: { score: { $meta: "textScore" } } },
-        ...courseWithRatingsPipeline(),
-        { $sort: { score: { $meta: "textScore" } } }
-    ];
-    const finalProject = pipeline.find(stage => stage.$project);
-    if (finalProject) finalProject.$project.score = 1;
-    const courses = await Course.aggregate(pipeline);
-    res.json(courses);
-});
-export const getPublicCourses = asyncHandler(async (req, res) => {
-    const pipeline = [
-        { $match: { status: 'Published' } },
-        ...courseWithRatingsPipeline(),
-        { $sort: { createdAt: -1 } }
-    ];
-    const courses = await Course.aggregate(pipeline);
-    res.status(200).json(courses);
-});
-export const getPublicCourseById = asyncHandler(async (req, res) => {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) { res.status(404); throw new Error('Course not found.'); }
-    const courseId = new mongoose.Types.ObjectId(req.params.id);
-    const pipeline = [
-        { $match: { _id: courseId, status: 'Published' } },
-        ...courseWithRatingsPipeline()
-    ];
-    const courses = await Course.aggregate(pipeline);
-    if (!courses || courses.length === 0) { res.status(404); throw new Error('Course not found or is not available.'); }
-    res.status(200).json(courses[0]);
-});
-export const getCompanyCourses = asyncHandler(async (req, res) => {
-    const courses = await Course.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
-    res.status(200).json(courses);
-});
-export const getCourseByIdForOwner = asyncHandler(async (req, res) => {
-    const course = await Course.findById(req.params.id);
-    if (!course) { res.status(404); throw new Error('Course not found'); }
-    if (course.createdBy.toString() !== req.user._id.toString()) {
-        res.status(401); throw new Error('Not authorized to view this course');
-    }
-    res.status(200).json(course);
-});
+// --- UPDATED FUNCTION to notify admin on publish ---
 export const createCourse = asyncHandler(async (req, res) => {
     const { title, description, level, tags, price, offerCertificate, curriculum, status } = req.body;
     const companyId = req.user._id;
+    const company = await Company.findById(companyId);
+
+    if (status === 'Published') {
+        if (!company || company.status !== 'Active') {
+            res.status(403);
+            throw new Error('Your account must be approved by an admin to publish courses.');
+        }
+    }
+
     if (status === 'Published' && (!req.files || !req.files.thumbnail || !req.files.thumbnail[0])) {
         res.status(400); throw new Error('A course thumbnail is required to publish.');
     }
+    
     let thumbnailData = {};
     if (req.files && req.files.thumbnail && req.files.thumbnail[0]) {
         thumbnailData = { url: req.files.thumbnail[0].path, public_id: req.files.thumbnail[0].filename };
     }
+
     let finalCurriculum = [];
     if (curriculum) {
         const parsedCurriculum = JSON.parse(curriculum);
@@ -155,7 +45,8 @@ export const createCourse = asyncHandler(async (req, res) => {
         let videoIndex = 0;
         for (const section of parsedCurriculum) {
             if (!section.title || typeof section.title !== 'string' || section.title.trim() === '') {
-                res.status(400); throw new Error('All curriculum sections must have a valid title.');
+                res.status(400);
+                throw new Error('All curriculum sections must have a valid title.');
             }
         }
         finalCurriculum = parsedCurriculum.map(section => ({
@@ -166,6 +57,7 @@ export const createCourse = asyncHandler(async (req, res) => {
             })
         }));
     }
+
     const newCourse = new Course({
         title, description, level, status: status || 'Draft',
         tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
@@ -173,22 +65,57 @@ export const createCourse = asyncHandler(async (req, res) => {
         offerCertificate: offerCertificate === 'true',
         createdBy: companyId, thumbnail: thumbnailData, curriculum: finalCurriculum,
     });
+
     const savedCourse = await newCourse.save();
+
+    // --- FIX: Create notification for admin on course publish ---
+    if (savedCourse.status === 'Published') {
+        const admins = await Admin.find({}).select('_id');
+        if (admins.length > 0) {
+            const notifications = admins.map(admin => ({
+                recipient: admin._id,
+                recipientModel: 'Admin',
+                message: `Company '${company.name}' has published a new course: "${savedCourse.title}"`,
+                link: `/admin/courses`,
+                type: 'course_published'
+            }));
+            await Notification.create(notifications);
+        }
+    }
+    
     res.status(201).json(savedCourse);
 });
+
+// --- UPDATED FUNCTION to notify admin on publish ---
 export const updateCourse = asyncHandler(async (req, res) => {
     const { title, description, level, tags, price, offerCertificate, curriculum, status } = req.body;
     const course = await Course.findById(req.params.id);
+
     if (!course) { res.status(404); throw new Error('Course not found'); }
     if (course.createdBy.toString() !== req.user._id.toString()) {
-        res.status(401); throw new Error('User not authorized to update this course.');
+        res.status(401);
+        throw new Error('User not authorized to update this course.');
     }
+
+    const company = await Company.findById(req.user._id);
+
+    if (status === 'Published' && course.status !== 'Published') {
+        if (!company || company.status !== 'Active') {
+            res.status(403);
+            throw new Error('Your account must be approved by an admin to publish courses.');
+        }
+    }
+    
+    const oldStatus = course.status;
+    course.status = status ?? course.status;
+
     if (req.files && req.files.thumbnail) {
         if (course.thumbnail && course.thumbnail.public_id) {
             await cloudinary.uploader.destroy(course.thumbnail.public_id);
         }
         course.thumbnail = { url: req.files.thumbnail[0].path, public_id: req.files.thumbnail[0].filename };
     }
+
     if (curriculum) {
         const parsedCurriculum = JSON.parse(curriculum);
         const videoFiles = req.files.videos || [];
@@ -221,25 +148,121 @@ export const updateCourse = asyncHandler(async (req, res) => {
             };
         }));
     }
+
     course.title = title ?? course.title;
     course.description = description ?? course.description;
     course.level = level ?? course.level;
-    course.status = status ?? course.status;
-    course.tags = tags ? tags.split(',').map(tag => tag.trim()) : course.tags;
+    course.tags = tags ? tags.split(',').map(tag => tag.trim()) : [],
     course.price = price !== undefined ? parseInt(price, 10) : course.price;
     course.offerCertificate = offerCertificate !== undefined ? offerCertificate === 'true' : course.offerCertificate;
+
     const updatedCourse = await course.save();
+
+    // --- FIX: Create notification for admin on course publish ---
+    if (updatedCourse.status === 'Published' && oldStatus === 'Draft') {
+        const admins = await Admin.find({}).select('_id');
+        if (admins.length > 0) {
+            const notifications = admins.map(admin => ({
+                recipient: admin._id,
+                recipientModel: 'Admin',
+                message: `Company '${company.name}' has published a new course: "${updatedCourse.title}"`,
+                link: `/admin/courses`,
+                type: 'course_published'
+            }));
+            await Notification.create(notifications);
+        }
+    }
+
     res.status(200).json(updatedCourse);
+});
+
+// ... other functions remain the same
+const courseWithRatingsPipeline = () => [ { $lookup: { from: 'feedbacks', localField: '_id', foreignField: 'course', as: 'reviews' } }, { $addFields: { averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] }, reviewCount: { $size: '$reviews' } } }, { $lookup: { from: 'companies', localField: 'createdBy', foreignField: '_id', as: 'creatorInfo' } }, { $unwind: { path: '$creatorInfo', preserveNullAndEmptyArrays: true } }, { $project: { title: 1, description: 1, level: 1, tags: 1, price: 1, offerCertificate: 1, status: 1, thumbnail: 1, curriculum: 1, students: 1, createdAt: 1, averageRating: 1, reviewCount: 1, 'createdBy.name': '$creatorInfo.name', 'createdBy._id': '$creatorInfo._id', }}];
+export const enrollInCourse = asyncHandler(async (req, res) => {
+    const courseId = req.params.id;
+    const studentId = req.user._id;
+    const course = await Course.findById(courseId);
+    const student = await Student.findById(studentId);
+    if (!course || !student) { res.status(404); throw new Error('Course or student not found.'); }
+    if (course.students.map(id => id.toString()).includes(studentId.toString())) { res.status(400); throw new Error('You are already enrolled in this course.'); }
+    if (course.price === 0) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            await Course.updateOne({ _id: courseId }, { $addToSet: { students: studentId } }, { session });
+            await Student.updateOne({ _id: studentId }, { $addToSet: { enrolledCourses: courseId } }, { session });
+            await Notification.create([{ recipient: course.createdBy, recipientModel: 'Company', message: `New student '${student.name}' has enrolled in your course: "${course.title}"`, link: `/company/students/${student._id}`, type: 'new_student' }], { session });
+            await session.commitTransaction();
+            res.status(200).json({ success: true, message: 'Successfully enrolled in free course.' });
+        } catch (error) {
+            await session.abortTransaction();
+            throw new Error('Free enrollment failed. Please try again.');
+        } finally {
+            session.endSession();
+        }
+        return;
+    }
+    const options = { amount: Number(course.price * 100), currency: "INR", receipt: `rcpt_${Date.now()}` };
+    if (options.amount < 100) { throw new Error('Course price must be at least ₹1 to process payment.'); }
+    try {
+        const order = await instance.orders.create(options);
+        if (!order) { res.status(500); throw new Error('Could not create payment order.'); }
+        res.status(200).json({ success: true, order });
+    } catch (error) {
+        console.error('[Enrollment] FAILED: Razorpay API Error:', error);
+        throw new Error('Payment gateway error. Please try again later.');
+    }
+});
+export const getEnrolledCourseForStudent = asyncHandler(async (req, res) => {
+    const course = await Course.findById(req.params.id).populate('createdBy', 'name industry').lean();
+    if (!course) { res.status(404); throw new Error('Course not found'); }
+    const isEnrolled = course.students.some(studentId => studentId.equals(req.user._id));
+    if (!isEnrolled) { res.status(403); throw new Error('You are not authorized to view this course.'); }
+    const progress = await Progress.findOne({ student: req.user._id, course: course._id }).lean();
+    res.status(200).json({ ...course, progress: progress ? progress.lessonProgress : [] });
+});
+export const searchCourses = asyncHandler(async (req, res) => {
+    const searchTerm = req.query.q || '';
+    if (!searchTerm) { return getPublicCourses(req, res); }
+    const pipeline = [ { $match: { $text: { $search: searchTerm }, status: 'Published' } }, { $addFields: { score: { $meta: "textScore" } } }, ...courseWithRatingsPipeline(), { $sort: { score: { $meta: "textScore" } } } ];
+    const finalProject = pipeline.find(stage => stage.$project);
+    if (finalProject) finalProject.$project.score = 1;
+    const courses = await Course.aggregate(pipeline);
+    res.json(courses);
+});
+export const getPublicCourses = asyncHandler(async (req, res) => {
+    const pipeline = [ { $match: { status: 'Published' } }, ...courseWithRatingsPipeline(), { $sort: { createdAt: -1 } } ];
+    const courses = await Course.aggregate(pipeline);
+    res.status(200).json(courses);
+});
+export const getPublicCourseById = asyncHandler(async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) { res.status(404); throw new Error('Course not found.'); }
+    const courseId = new mongoose.Types.ObjectId(req.params.id);
+    const pipeline = [ { $match: { _id: courseId, status: 'Published' } }, ...courseWithRatingsPipeline() ];
+    const courses = await Course.aggregate(pipeline);
+    if (!courses || courses.length === 0) { res.status(404); throw new Error('Course not found or is not available.'); }
+    res.status(200).json(courses[0]);
+});
+export const getCompanyCourses = asyncHandler(async (req, res) => {
+    const courses = await Course.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
+    res.status(200).json(courses);
+});
+export const getCourseByIdForOwner = asyncHandler(async (req, res) => {
+    const course = await Course.findById(req.params.id);
+    if (!course) { res.status(404); throw new Error('Course not found'); }
+    if (course.createdBy.toString() !== req.user._id.toString()) {
+        res.status(401); throw new Error('Not authorized to view this course');
+    }
+    res.status(200).json(course);
 });
 export const deleteCourse = asyncHandler(async (req, res) => {
     const course = await Course.findById(req.params.id);
     if (!course) { res.status(404); throw new Error('Course not found.'); }
     if (course.createdBy.toString() !== req.user._id.toString()) {
-        res.status(401); throw new Error('User not authorized.');
+        res.status(401);
+        throw new Error('User not authorized.');
     }
-    if (course.thumbnail && course.thumbnail.public_id) {
-        await cloudinary.uploader.destroy(course.thumbnail.public_id);
-    }
+    if (course.thumbnail && course.thumbnail.public_id) { await cloudinary.uploader.destroy(course.thumbnail.public_id); }
     if (course.curriculum && course.curriculum.length > 0) {
         const videoPublicIds = course.curriculum.flatMap(s => s.lessons).map(l => l.videoPublicId).filter(Boolean);
         if (videoPublicIds.length > 0) {

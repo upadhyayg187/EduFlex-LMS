@@ -70,7 +70,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
                 });
             }
 
-            await Notification.create(notifications, { session });
+            await Notification.create(notifications, { session, ordered: true });
 
             await session.commitTransaction();
             res.status(200).json({ success: true, message: "Enrollment successful!" });

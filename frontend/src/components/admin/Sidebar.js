@@ -4,15 +4,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import {
-  LayoutDashboard, Building, Users, BookCopy, Settings, LogOut, X
+  LayoutDashboard, Building, Users, BookCopy, Settings, LogOut, X, LifeBuoy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+// --- ADD SUPPORT TO NAV ITEMS ---
 const navItems = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Manage Companies', href: '/admin/companies', icon: Building },
   { label: 'Manage Students', href: '/admin/students', icon: Users },
   { label: 'Manage Courses', href: '/admin/courses', icon: BookCopy },
+  { label: 'Support', href: '/admin/support', icon: LifeBuoy },
 ];
 
 const Logo = () => (

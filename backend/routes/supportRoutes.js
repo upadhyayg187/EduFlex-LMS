@@ -4,21 +4,23 @@ import {
   getCompanyTickets,
   getTicketById,
   addReply,
-  updateTicketStatus
+  updateTicketStatus,
+  getAllTicketsForAdmin
 } from '../controllers/supportController.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Company routes
-router.route('/').post(protect, authorize('company'), createTicket);
-router.route('/my-tickets').get(protect, authorize('company'), getCompanyTickets);
+// --- ADMIN ROUTES ---
+router.get('/admin/all-tickets', protect, authorize('admin'), getAllTicketsForAdmin);
+router.put('/status/:ticketId', protect, authorize('admin'), updateTicketStatus);
 
-// Shared routes for company and admin
-router.route('/:id').get(protect, authorize('company', 'admin'), getTicketById);
-router.route('/reply/:ticketId').post(protect, authorize('company', 'admin'), addReply);
+// --- COMPANY ROUTES ---
+router.post('/', protect, authorize('company'), createTicket);
+router.get('/my-tickets', protect, authorize('company'), getCompanyTickets);
 
-// Admin-only routes
-router.route('/status/:ticketId').put(protect, authorize('admin'), updateTicketStatus);
+// --- SHARED ROUTES ---
+router.get('/:id', protect, authorize('company', 'admin'), getTicketById);
+router.post('/reply/:ticketId', protect, authorize('company', 'admin'), addReply);
 
 export default router;

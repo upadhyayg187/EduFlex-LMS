@@ -1,39 +1,39 @@
 'use client';
-
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
-import axiosInstance from '@/helpers/axiosInstance';
+import Link from 'next/link';
+import { toast } from 'react-hot-toast';
+import { useUser } from '@/context/UserContext'; // Import useUser
 
 export default function Header() {
-    const router = useRouter();
+  const router = useRouter();
+  const { logout } = useUser(); // Destructure logout from useUser context
 
-    const handleLogout = async () => {
-        try {
-            await axiosInstance.post('/auth/logout');
-            toast.success('Logged out successfully');
-            router.push('/login');
-        } catch (error) {
-            toast.error('Logout failed');
-        }
-    };
+  const handleLogout = async () => {
+    try {
+      // Use the logout function from UserContext
+      logout();
+      toast.success('Logged out successfully');
+      // The logout() function from UserContext already handles the redirection to /login
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Logout failed. Please try again.');
+    }
+  };
 
-    return (
-        <header className="bg-white shadow-md">
-            <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
-                <Link href="/" className="text-xl font-bold text-gray-800">
-                    LMS Platform
-                </Link>
-                <div>
-                    {/* We can add user info and role-specific links here later */}
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                    >
-                        Logout
-                    </button>
-                </div>
-            </nav>
-        </header>
-    );
+  return (
+    <header className="bg-white shadow-md py-3 px-6 flex justify-between items-center">
+      <Link href="/" className="text-2xl font-bold text-blue-600">
+        LMS Platform
+      </Link>
+      <div className="flex items-center space-x-4">
+        {/* We can add user info and role-specific links here later */}
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+        >
+          Log Out
+        </button>
+      </div>
+    </header>
+  );
 }

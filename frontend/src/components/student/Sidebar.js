@@ -1,3 +1,4 @@
+// LMS/frontend/src/components/student/Sidebar.js
 'use client';
 
 import { Fragment } from 'react';
@@ -5,16 +6,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import {
-  Home, BookCopy, ClipboardCheck, BarChart2, Settings, LogOut, Search, X
+  Home, BookCopy, ClipboardCheck, BarChart2, Settings, LogOut, Search, X, Award // Import Award icon
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const navItems = [
   { label: 'Dashboard', href: '/student/dashboard', icon: Home },
-  // --- FIX: Updated the href from /my-courses to /courses ---
   { label: 'My Courses', href: '/student/courses', icon: BookCopy },
   { label: 'My Progress', href: '/student/progress', icon: BarChart2 },
   { label: 'Assignments', href: '/student/assignments', icon: ClipboardCheck },
+  { label: 'My Certificates', href: '/student/certificates', icon: Award }, // ADD THIS NEW NAV ITEM
 ];
 
 const Logo = () => (
@@ -31,6 +32,7 @@ const Logo = () => (
 
 const NavLink = ({ item, pathname, onClick }) => {
     const Icon = item.icon;
+    // Check if the current pathname matches the href exactly or if it's a sub-path (except for dashboard which is exact)
     const isActive = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
     return (
         <li>

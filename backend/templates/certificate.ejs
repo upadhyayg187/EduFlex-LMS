@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion</title>
+    <style>
+        /* Comment out or remove the Google Fonts import */
+        /* @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap'); */
+
+        body {
+            /* Fallback to generic sans-serif if custom fonts are removed/unloaded */
+            font-family: 'Roboto', sans-serif, Arial, Helvetica; /* Added Arial, Helvetica as fallbacks */
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .certificate-container {
+            width: 297mm; /* A4 width */
+            height: 210mm; /* A4 height */
+            margin: 0 auto;
+            border: 10px solid #007bff; /* Blue border */
+            padding: 20mm;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            background-image: url('<%= platformLogoUrl || "https://res.cloudinary.com/ddjxyhbxw/image/upload/v1721839200/lms-thumbnails/eduflex_logo_with_name.png" %>'); /* Placeholder or actual logo */
+            background-repeat: no-repeat;
+            background-position: 50% 10%;
+            background-size: 80px; /* Small logo at top */
+        }
+        .top-section {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3em;
+            color: #007bff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        .granted-to {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #495057;
+        }
+        .student-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8em;
+            color: #343a40;
+            margin: 10px 0 20px;
+            border-bottom: 2px solid #6c757d;
+            display: inline-block;
+            padding-bottom: 5px;
+            font-weight: 700;
+        }
+        .completion-text {
+            font-size: 1.1em;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .course-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2em;
+            color: #007bff;
+            margin: 10px 0 30px;
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+        .details-section {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            margin-top: auto; /* Pushes content to bottom */
+        }
+        .signature-block {
+            text-align: center;
+            flex: 1;
+            padding: 0 10mm;
+        }
+        .signature-line {
+            border-top: 1px solid #6c757d;
+            margin-top: 20px;
+            padding-top: 5px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .verification-id {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 20px;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8em;
+            font-family: 'Playfair Display', serif;
+            color: rgba(0, 123, 255, 0.08); /* Light blue transparent */
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .footer-info {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate-container">
+        <div class="top-section">
+            <h1 class="title">Certificate of Completion</h1>
+            <p class="subtitle">THIS CERTIFICATE IS AWARDED TO</p>
+        </div>
+
+        <div class="main-content">
+            <p class="granted-to"></p>
+            <h2 class="student-name"><%= studentName %></h2>
+            <p class="completion-text">for successfully completing the online course</p>
+            <h3 class="course-title"><%= courseTitle %></h3>
+        </div>
+
+        <div class="details-section">
+            <div class="signature-block">
+                <p>_________________________</p>
+                <p class="signature-line">Instructor Signature</p>
+                <p><%= instructorName %></p>
+                <p>EduFlex Instructor</p>
+            </div>
+            <div class="signature-block">
+                <p>_________________________</p>
+                <p class="signature-line">Date of Completion</p>
+                <p><%= completionDate %></p>
+            </div>
+        </div>
+        <div class="footer-info">
+            <p>Verification ID: <%= certificateId %></p>
+            <p>Issued by EduFlex - Modern Learning Platform</p>
+        </div>
+        <div class="watermark"><%= platformName || 'EduFlex' %></div>
+    </div>
+</body>
+</html>

@@ -1,8 +1,11 @@
+// LMS/backend/server.js
+
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import config from './config/config.js';
 import connectDB from './config/db.js';
+import { notFound, errorHandler } from './middlewares/errorMiddleware.js'; // Import error handlers
 
 // Import Routes
 import authRoutes from './routes/authRoutes.js';
@@ -17,6 +20,7 @@ import aiSupportRoutes from './routes/aiSupportRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import submissionRoutes from './routes/submissionRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import certificateRoutes from './routes/certificateRoutes.js'; // Import the new certificate routes
 
 connectDB();
 const app = express();
@@ -44,9 +48,14 @@ app.use('/api/ai-support', aiSupportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/admins', adminRoutes);
+app.use('/api/certificates', certificateRoutes); // Use the new certificate routes
 
-
+// Simple root endpoint
 app.get('/', (req, res) => res.send('API is running successfully...'));
+
+// Error handling middleware (MUST be after routes)
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = config.port;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

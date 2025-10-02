@@ -1,0 +1,13 @@
+[build]
+  base = "frontend"          # tells Netlify to run build inside frontend folder
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18"        # Next.js 15 requires Node >=18
+  NEXT_PUBLIC_API_URL = "https://your-backend.onrender.com"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

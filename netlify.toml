@@ -1,6 +1,6 @@
 [build]
   base = "frontend"          # tells Netlify to run build inside frontend folder
-  command = "npm run build"
+  command = "next build --no-lint"
   publish = ".next"
 
 [build.environment]

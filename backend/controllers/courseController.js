@@ -8,15 +8,21 @@ import Company from '../models/companyModel.js';
 import Feedback from '../models/feedbackModel.js';
 import Progress from '../models/progressModel.js';
 import Notification from '../models/notificationModel.js';
-import Admin from '../models/adminModel.js'; // Import Admin model
+import Admin from '../models/adminModel.js';
+import Assignment from '../models/assignmentModel.js';
+import Submission from '../models/submissionModel.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const instance = new Razorpay({
     key_id: config.razorpayKeyId,
     key_secret: config.razorpayKeySecret,
 });
 
-// --- UPDATED FUNCTION to notify admin on publish ---
+// @desc    Create a new course
+// @route   POST /api/courses
+// @access  Private/Company
 export const createCourse = asyncHandler(async (req, res) => {
     const { title, description, level, tags, price, offerCertificate, curriculum, status } = req.body;
     const companyId = req.user._id;
@@ -68,7 +74,6 @@ export const createCourse = asyncHandler(async (req, res) => {
 
     const savedCourse = await newCourse.save();
 
-    // --- FIX: Create notification for admin on course publish ---
     if (savedCourse.status === 'Published') {
         const admins = await Admin.find({}).select('_id');
         if (admins.length > 0) {
@@ -86,7 +91,9 @@ export const createCourse = asyncHandler(async (req, res) => {
     res.status(201).json(savedCourse);
 });
 
-// --- UPDATED FUNCTION to notify admin on publish ---
+// @desc    Update a course
+// @route   PUT /api/courses/:id
+// @access  Private/Company
 export const updateCourse = asyncHandler(async (req, res) => {
     const { title, description, level, tags, price, offerCertificate, curriculum, status } = req.body;
     const course = await Course.findById(req.params.id);
@@ -158,7 +165,6 @@ export const updateCourse = asyncHandler(async (req, res) => {
 
     const updatedCourse = await course.save();
 
-    // --- FIX: Create notification for admin on course publish ---
     if (updatedCourse.status === 'Published' && oldStatus === 'Draft') {
         const admins = await Admin.find({}).select('_id');
         if (admins.length > 0) {
@@ -176,7 +182,55 @@ export const updateCourse = asyncHandler(async (req, res) => {
     res.status(200).json(updatedCourse);
 });
 
-// ... other functions remain the same
+// --- UPDATED FUNCTION WITH REFACTORED DELETION LOGIC ---
+// @desc    Delete a course and all associated data
+// @route   DELETE /api/courses/:id
+// @access  Private/Company
+export const deleteCourse = asyncHandler(async (req, res) => {
+    const course = await Course.findById(req.params.id);
+    if (!course) { res.status(404); throw new Error('Course not found.'); }
+    if (course.createdBy.toString() !== req.user._id.toString()) {
+        res.status(401);
+        throw new Error('User not authorized.');
+    }
+
+    const courseId = course._id;
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        // 1. Delete media from Cloudinary
+        if (course.thumbnail && course.thumbnail.public_id) { await cloudinary.uploader.destroy(course.thumbnail.public_id); }
+        if (course.curriculum && course.curriculum.length > 0) {
+            const videoPublicIds = course.curriculum.flatMap(s => s.lessons).map(l => l.videoPublicId).filter(Boolean);
+            if (videoPublicIds.length > 0) {
+                await cloudinary.api.delete_resources(videoPublicIds, { resource_type: 'video' });
+            }
+        }
+
+        // 2. Delete all related documents in a transaction
+        const assignmentIds = (await Assignment.find({ course: courseId }).select('_id')).map(a => a._id);
+        await Submission.deleteMany({ assignment: { $in: assignmentIds } }, { session });
+        await Assignment.deleteMany({ course: courseId }, { session });
+        await Feedback.deleteMany({ course: courseId }, { session });
+        await Progress.deleteMany({ course: courseId }, { session });
+        await Student.updateMany({ enrolledCourses: courseId }, { $pull: { enrolledCourses: courseId } }, { session });
+        
+        // REFACTORED: Use Model.deleteOne for clarity and reliability within the transaction
+        await Course.deleteOne({ _id: courseId }, { session });
+
+        await session.commitTransaction();
+        res.status(200).json({ message: 'Course and all associated content deleted successfully.' });
+
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('Failed to delete course and its content. Error:', error); // Improved logging
+        throw new Error('Failed to delete course and its content.');
+    } finally {
+        session.endSession();
+    }
+});
+
 const courseWithRatingsPipeline = () => [ { $lookup: { from: 'feedbacks', localField: '_id', foreignField: 'course', as: 'reviews' } }, { $addFields: { averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] }, reviewCount: { $size: '$reviews' } } }, { $lookup: { from: 'companies', localField: 'createdBy', foreignField: '_id', as: 'creatorInfo' } }, { $unwind: { path: '$creatorInfo', preserveNullAndEmptyArrays: true } }, { $project: { title: 1, description: 1, level: 1, tags: 1, price: 1, offerCertificate: 1, status: 1, thumbnail: 1, curriculum: 1, students: 1, createdAt: 1, averageRating: 1, reviewCount: 1, 'createdBy.name': '$creatorInfo.name', 'createdBy._id': '$creatorInfo._id', }}];
 export const enrollInCourse = asyncHandler(async (req, res) => {
     const courseId = req.params.id;
@@ -254,21 +308,4 @@ export const getCourseByIdForOwner = asyncHandler(async (req, res) => {
         res.status(401); throw new Error('Not authorized to view this course');
     }
     res.status(200).json(course);
-});
-export const deleteCourse = asyncHandler(async (req, res) => {
-    const course = await Course.findById(req.params.id);
-    if (!course) { res.status(404); throw new Error('Course not found.'); }
-    if (course.createdBy.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('User not authorized.');
-    }
-    if (course.thumbnail && course.thumbnail.public_id) { await cloudinary.uploader.destroy(course.thumbnail.public_id); }
-    if (course.curriculum && course.curriculum.length > 0) {
-        const videoPublicIds = course.curriculum.flatMap(s => s.lessons).map(l => l.videoPublicId).filter(Boolean);
-        if (videoPublicIds.length > 0) {
-            await cloudinary.api.delete_resources(videoPublicIds, { resource_type: 'video' });
-        }
-    }
-    await course.deleteOne();
-    res.status(200).json({ message: 'Course deleted successfully.' });
 });

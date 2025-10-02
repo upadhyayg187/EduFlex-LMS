@@ -1,7 +1,5 @@
-// LMS/backend/utils/generateCertificatePDF.js (TEMPORARY TEST VERSION - resource_type changed)
-
-import puppeteer from 'puppeteer';
-// import ejs from 'ejs'; // TEMPORARILY COMMENT OUT EJS
+import puppeteer from 'puppeteer-core';
+import ejs from 'ejs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -15,43 +13,30 @@ cloudinary.config({
   api_secret: config.cloudinaryApiSecret,
 });
 
+// Helper to get __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const generateCertificatePDF = async (certificateData) => {
   let browser;
   try {
-    // --- TEMPORARY TEST HTML CONTENT ---
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Test PDF</title>
-        <style>
-          body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-          h1 { color: #007bff; }
-          p { color: #343a40; }
-        </style>
-      </head>
-      <body>
-        <h1>Hello from Puppeteer!</h1>
-        <p>This is a test PDF generated from EduFlex.</p>
-        <p>Student: ${certificateData.studentName}</p>
-        <p>Course: ${certificateData.courseTitle}</p>
-        <p>ID: ${certificateData.certificateId}</p>
-      </body>
-      </html>
-    `;
-    // --- END TEMPORARY TEST HTML CONTENT ---
+    const templatePath = path.join(__dirname, '../templates/certificate.ejs');
 
-    console.log('--- TEST MODE: Using minimal HTML, resource_type: "image" ---');
-    console.log('Certificate Data passed to EJS (test):', certificateData);
-    console.log('Generated HTML (first 500 chars, test):', html.substring(0, 500));
-
+    const html = await ejs.renderFile(templatePath, {
+      studentName: certificateData.studentName,
+      courseTitle: certificateData.courseTitle,
+      instructorName: certificateData.instructorName || 'EduFlex Instructors',
+      completionDate: certificateData.completionDate,
+      certificateId: certificateData.certificateId,
+      platformName: certificateData.platformName || 'EduFlex',
+      platformLogoUrl: certificateData.platformLogoUrl
+    });
 
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      // USE THE STABLE PATH HERE
+      executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     });
     const page = await browser.newPage();
 
@@ -59,24 +44,24 @@ const generateCertificatePDF = async (certificateData) => {
       waitUntil: 'networkidle0',
     });
 
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', err => console.error('PAGE ERROR:', err.toString()));
-
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+      margin: {
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm'
+      }
     });
-
-    console.log('PDF Buffer size (test):', pdfBuffer.length, 'bytes');
 
     const uploadResult = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
-          folder: 'lms-certificates-test',
-          resource_type: 'raw', // FIXED: Use 'raw' for PDF files
-          public_id: `test_certificate_${certificateData.certificateId}`,
-          format: 'pdf', // Keep format as pdf
+          folder: 'lms-certificates',
+          resource_type: 'raw', // FIX: Use 'raw' for PDF files
+          public_id: `certificate_${certificateData.certificateId}`,
+          format: 'pdf',
         },
         (error, result) => {
           if (error) return reject(error);
@@ -85,16 +70,14 @@ const generateCertificatePDF = async (certificateData) => {
       ).end(pdfBuffer);
     });
 
-    console.log('Cloudinary Upload Result (test):', uploadResult);
-
     return {
       certificateUrl: uploadResult.secure_url,
       public_id: uploadResult.public_id,
     };
 
   } catch (error) {
-    console.error('Critial Error during TEST certificate generation or upload:', error);
-    throw new Error(`Failed to generate or upload TEST certificate: ${error.message}`);
+    console.error('Error generating or uploading certificate PDF:', error);
+    throw new Error('Failed to generate or upload certificate.');
   } finally {
     if (browser) {
       await browser.close();

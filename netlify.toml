@@ -5,7 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "18"        # Next.js 15 requires Node >=18
-  NEXT_PUBLIC_API_URL = "https://your-backend.onrender.com"
+  NEXT_PUBLIC_API_URL = "http://localhost:5000/api"
 
 [[redirects]]
   from = "/*"

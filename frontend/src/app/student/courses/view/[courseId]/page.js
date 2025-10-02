@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@/context/UserContext';
+import Image from 'next/image';
 import axiosInstance from '@/helpers/axiosInstance';
 import { toast } from 'react-hot-toast';
 import { Lock, Star, Users, BarChart2, Award, FileDown, Eye, CheckCircle, PlayCircle, Notebook, ArrowLeft, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -148,7 +149,7 @@ function CourseDetailContent() {
         } else {
             console.log('Condition NOT met: videoRef.current or currentLesson (or videoUrl) is missing. Waiting for initial lesson selection or video content.');
         }
-    }, [currentLesson]); // ***FIXED: Removed lessonProgressMap from dependencies***
+    }, [currentLesson, lessonProgressMap]); // Added lessonProgressMap to dependencies for exhaustive-deps
 
     const saveProgress = async (lessonId, isCompletedStatus, timestamp) => {
         try {
@@ -261,7 +262,7 @@ function CourseDetailContent() {
             <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-red-50 p-4 rounded-lg text-red-700">
                 <AlertCircle className="h-12 w-12 mb-4" />
                 <h2 className="text-xl font-bold mb-2">{error || 'Course not found or access denied.'}</h2>
-                <p className="mb-4 text-center">We couldn't load the course. It might not exist, or you might not have permission to view it.</p>
+                <p className="mb-4 text-center">We couldn&apos;t load the course. It might not exist, or you might not have permission to view it.</p>
                 <Link href="/student/courses" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     Go to My Courses
                 </Link>
@@ -274,12 +275,15 @@ function CourseDetailContent() {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
                 <div className="bg-white rounded-xl shadow-lg p-8 max-w-2xl text-center">
-                    <img
+                    {/* Use Next.js Image for optimization */}
+                    <Image
                         src={course.thumbnail?.url || 'https://placehold.co/600x400/e2e8f0/475569?text=EduFlex'}
                         alt={course.title}
+                        width={600}
+                        height={192}
                         className="w-full h-48 object-cover rounded-md mb-6"
                     />
-                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to "{course.title}"!</h2>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to &quot;{course.title}&quot;!</h2>
                     <p className="text-gray-600 mb-6">
                         Ready to start your learning journey? Click the button below to begin your first lesson.
                     </p>
@@ -399,7 +403,7 @@ function CourseDetailContent() {
                             <Award className="h-5 w-5" />
                             <h4 className="font-semibold text-base">Course Completed! Certificate Available!</h4>
                         </div>
-                        <p className="text-sm mb-4">Congratulations on completing "{course.title}"! Your certificate is ready.</p>
+                        <p className="text-sm mb-4">Congratulations on completing &quot;{course.title}&quot;! Your certificate is ready.</p>
                         <div className="flex flex-col space-y-3">
                             <a
                                 href={certificateUrl}

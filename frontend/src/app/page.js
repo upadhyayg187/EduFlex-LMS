@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BookOpen, Users, ArrowRight, Star, GraduationCap, Building, Zap } from 'lucide-react';
 import axios from 'axios';
+import Image from 'next/image';
 
 // --- Reusable Components for this Page ---
 
@@ -20,10 +21,13 @@ const CourseCard = ({ course }) => (
     <div className="group block overflow-hidden rounded-2xl bg-white shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
         {/* --- FIX: Thumbnail container --- */}
         <div className="h-48 relative overflow-hidden bg-slate-100 flex items-center justify-center">
-            <img
+            <Image
                 src={course.thumbnail?.url || 'https://placehold.co/600x400/e2e8f0/475569?text=EduFlex'}
                 alt={course.title}
-                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+                fill
+                className="object-contain transition-transform duration-500 group-hover:scale-110"
+                sizes="(max-width: 768px) 100vw, 33vw"
+                style={{ objectFit: 'contain' }}
             />
         </div>
         <div className="p-5">
@@ -217,9 +221,9 @@ export default async function HomePage() {
                         </div>
                         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             <div className="bg-slate-50 p-8 rounded-xl">
-                                <p className="text-slate-700">"This platform changed the way I learn. The courses are high-quality and the instructors are top-notch. Highly recommended!"</p>
+                                <p className="text-slate-700">&quot;This platform changed the way I learn. The courses are high-quality and the instructors are top-notch. Highly recommended!&quot;</p>
                                 <div className="mt-4 flex items-center">
-                                    <img className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Jane Doe"/>
+                                    <Image className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Jane Doe" width={48} height={48}/>
                                     <div className="ml-4">
                                         <p className="font-semibold text-slate-900">Jane Doe</p>
                                         <p className="text-sm text-slate-500">Software Engineer</p>
@@ -227,9 +231,9 @@ export default async function HomePage() {
                                 </div>
                             </div>
                              <div className="bg-slate-50 p-8 rounded-xl">
-                                <p className="text-slate-700">"As an instructor, EduFlex provides all the tools I need to create and sell my courses. The dashboard is intuitive and powerful."</p>
+                                <p className="text-slate-700">&quot;As an instructor, EduFlex provides all the tools I need to create and sell my courses. The dashboard is intuitive and powerful.&quot;</p>
                                 <div className="mt-4 flex items-center">
-                                    <img className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026705d" alt="John Smith"/>
+                                    <Image className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026705d" alt="John Smith" width={48} height={48}/>
                                     <div className="ml-4">
                                         <p className="font-semibold text-slate-900">John Smith</p>
                                         <p className="text-sm text-slate-500">Tech Instructor</p>
@@ -237,9 +241,9 @@ export default async function HomePage() {
                                 </div>
                             </div>
                              <div className="bg-slate-50 p-8 rounded-xl">
-                                <p className="text-slate-700">"I've completed three courses here and each one has directly helped me in my career. The quality is simply unmatched."</p>
+                                <p className="text-slate-700">&quot;I&apos;ve completed three courses here and each one has directly helped me in my career. The quality is simply unmatched.&quot;</p>
                                 <div className="mt-4 flex items-center">
-                                    <img className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026706d" alt="Emily White"/>
+                                    <Image className="h-12 w-12 rounded-full" src="https://i.pravatar.cc/150?u=a042581f4e29026706d" alt="Emily White" width={48} height={48}/>
                                     <div className="ml-4">
                                         <p className="font-semibold text-slate-900">Emily White</p>
                                         <p className="text-sm text-slate-500">Product Manager</p>

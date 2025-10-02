@@ -17,7 +17,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, courseTitle }) => {
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                         <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Course</h3>
-                        <div className="mt-2"><p className="text-sm text-gray-500">Are you sure you want to delete "<strong>{courseTitle}</strong>"? This action is permanent.</p></div>
+                        <div className="mt-2"><p className="text-sm text-gray-500">Are you sure you want to delete &quot;<strong>{courseTitle}</strong>&quot;? This action is permanent.</p></div>
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
@@ -147,7 +147,7 @@ export default function ManageCoursesPage() {
                 <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-lg">
                     <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-lg font-medium text-gray-900">No Courses Found</h3>
-                    <p className="mt-1 text-sm text-gray-500">You haven't created any courses yet. Get started by creating your first one!</p>
+                    <p className="mt-1 text-sm text-gray-500">You haven&apos;t created any courses yet. Get started by creating your first one!</p>
                     <div className="mt-6">
                         <Link href="/company/create-course" className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
                             <Plus className="-ml-0.5 mr-1.5 h-5 w-5" />

@@ -19,7 +19,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, studentName }) => {
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                         <h3 className="text-lg leading-6 font-medium text-gray-900">Remove Student</h3>
-                        <div className="mt-2"><p className="text-sm text-gray-500">Are you sure you want to remove "<strong>{studentName}</strong>" from all your courses? This action will unenroll them.</p></div>
+                        <div className="mt-2"><p className="text-sm text-gray-500">Are you sure you want to remove &quot;<strong>{studentName}</strong>&quot; from all your courses? This action will unenroll them.</p></div>
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">

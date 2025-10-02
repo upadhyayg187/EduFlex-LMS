@@ -17,7 +17,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, studentName }) => {
                     </div>
                     <div className="mt-3">
                         <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Student</h3>
-                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete "<strong>{studentName}</strong>"? This will permanently delete the student and all of their associated data (progress, submissions, etc.). This action cannot be undone.</p>
+                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete &quot;<strong>{studentName}</strong>&quot;? This will permanently delete the student and all of their associated data (progress, submissions, etc.). This action cannot be undone.</p>
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">

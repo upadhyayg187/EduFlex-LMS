@@ -16,7 +16,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, courseTitle }) => {
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100"><AlertTriangle className="h-6 w-6 text-red-600" /></div>
                     <div className="mt-3">
                         <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Course</h3>
-                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete "<strong>{courseTitle}</strong>"? This will permanently delete the course and all related student data. This action cannot be undone.</p>
+                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete &quot;<strong>{courseTitle}</strong>&quot;? This will permanently delete the course and all related student data. This action cannot be undone.</p>
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">

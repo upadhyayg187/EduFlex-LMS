@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '@/helpers/axiosInstance';
 import { toast, Toaster } from 'react-hot-toast';
-import { Building, Search, ChevronUp, ChevronDown, AlertTriangle, Trash2, Users, BookCopy, Check, X, PauseCircle } from 'lucide-react';
+import { Building, Search, ChevronUp, ChevronDown, AlertTriangle, Trash2, Users, BookCopy, Check, X, PauseCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, companyName }) => {
@@ -15,7 +15,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, companyName }) => {
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100"><AlertTriangle className="h-6 w-6 text-red-600" /></div>
                     <div className="mt-3">
                         <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Company</h3>
-                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete "<strong>{companyName}</strong>"? This will permanently delete the company and all of its content. This action cannot be undone.</p>
+                        <p className="mt-2 text-sm text-gray-500">Are you sure you want to delete &quot;<strong>{companyName}</strong>&quot;? This will permanently delete the company and all of its content. This action cannot be undone.</p>
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
